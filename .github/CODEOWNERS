@@ -1,0 +1,22 @@
+# CODEOWNERS for daily-vibecheck
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owners for all files
+* @hugo-hsi-dev
+
+# CI/CD configuration
+.github/workflows/ @hugo-hsi-dev
+.github/dependabot.yml @hugo-hsi-dev
+
+# Configuration files
+*.config.* @hugo-hsi-dev
+tsconfig.json @hugo-hsi-dev
+.prettierrc @hugo-hsi-dev
+eslint.config.js @hugo-hsi-dev
+
+# Database
+src/lib/server/db/ @hugo-hsi-dev
+
+# Documentation
+CLAUDE.md @hugo-hsi-dev
+README.md @hugo-hsi-dev
