@@ -56,5 +56,8 @@
 	},
 	"dependencies": {
 		"postgres": "^3.4.7"
+	},
+	"overrides": {
+		"vite": "npm:rolldown-vite@latest"
 	}
 }
