@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+env:
+  # We only install Chromium manually
+  PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+
 jobs:
   format:
     name: Format
@@ -19,7 +23,7 @@ jobs:
         with:
           node-version: lts/*
           cache: 'pnpm'
-      - run: pnpm install
+      - run: pnpm install --frozen-lockfile
       - run: pnpm run format:check
 
   lint:
@@ -34,7 +38,7 @@ jobs:
         with:
           node-version: lts/*
           cache: 'pnpm'
-      - run: pnpm install
+      - run: pnpm install --frozen-lockfile
       - run: pnpm run lint:check
 
   check:
@@ -49,7 +53,7 @@ jobs:
         with:
           node-version: lts/*
           cache: 'pnpm'
-      - run: pnpm install
+      - run: pnpm install --frozen-lockfile
       - run: pnpm run check
 
   unit-test:
@@ -64,7 +68,8 @@ jobs:
         with:
           node-version: lts/*
           cache: 'pnpm'
-      - run: pnpm install
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm playwright install chromium
       - run: pnpm run test:unit -- --run
 
   e2e-test:
@@ -79,7 +84,8 @@ jobs:
         with:
           node-version: lts/*
           cache: 'pnpm'
-      - run: pnpm install
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm playwright install chromium
       - run: pnpm run test:e2e
 
   build:
