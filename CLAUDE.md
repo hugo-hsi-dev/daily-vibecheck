@@ -111,6 +111,36 @@ Daily Vibecheck is a SvelteKit application using TypeScript, Tailwind CSS v4, an
 - `+page.ts` / `+layout.ts` - Universal load functions
 - Server-only code must be in `src/lib/server/` or `*.server.ts` files
 
+### Type-Safe Routing
+
+**Always use `resolve()` for internal navigation** to ensure routes are validated at compile time and properly handle base path configuration.
+
+```typescript
+import { resolve } from '$app/paths';
+import { goto } from '$app/navigation';
+
+// ✅ CORRECT: Use resolve() with goto()
+await goto(resolve('/dashboard'));
+await goto(resolve('/blog/[slug]', { slug: 'hello-world' }));
+
+// ✅ CORRECT: Use resolve() in href attributes
+<a href={resolve('/about')}>About</a>
+<a href={resolve('/posts/[id]', { id: '123' })}>View Post</a>
+
+// ❌ WRONG: Hardcoded paths (fails ESLint svelte/no-navigation-without-resolve)
+await goto('/dashboard');
+<a href="/about">About</a>
+```
+
+**Why use `resolve()`?**
+
+1. **Type safety** - Routes are validated at compile time, preventing broken links during refactoring
+2. **Base path handling** - Automatically prefixes routes with configured base path
+3. **ESLint enforcement** - The `svelte/no-navigation-without-resolve` rule (enabled in recommended config) catches missing `resolve()` calls
+4. **Dynamic routes** - Properly populates route parameters with type checking
+
+**Exceptions:** Absolute URLs (e.g., `https://example.com`), fragment URLs (e.g., `#section`), and empty strings for shallow routing don't require `resolve()`.
+
 ### Environment Variables
 
 - Accessed via `$env/dynamic/private` for server-side runtime variables
