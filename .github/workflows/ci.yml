@@ -31,10 +31,10 @@ jobs:
           node-version: '22'
           cache: 'pnpm'
       - run: pnpm install
-      - run: pnpm run lint
+      - run: pnpm run lint:check
 
-  type-check:
-    name: Type Check
+  check:
+    name: Check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
