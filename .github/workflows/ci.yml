@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+env:
+  # We only install Chromium manually
+  PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+
 jobs:
   format:
     name: Format
@@ -13,11 +17,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v2
+        with:
+          version: latest
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: lts/*
           cache: 'pnpm'
-      - run: pnpm install
+      - run: pnpm install --frozen-lockfile
       - run: pnpm run format:check
 
   lint:
@@ -26,24 +32,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v2
+        with:
+          version: latest
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: lts/*
           cache: 'pnpm'
-      - run: pnpm install
-      - run: pnpm run lint
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run lint:check
 
-  type-check:
-    name: Type Check
+  check:
+    name: Check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v2
+        with:
+          version: latest
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: lts/*
           cache: 'pnpm'
-      - run: pnpm install
+      - run: pnpm install --frozen-lockfile
       - run: pnpm run check
 
   unit-test:
@@ -52,11 +62,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v2
+        with:
+          version: latest
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: lts/*
           cache: 'pnpm'
-      - run: pnpm install
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm playwright install chromium
       - run: pnpm run test:unit -- --run
 
   e2e-test:
@@ -65,11 +78,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v2
+        with:
+          version: latest
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: lts/*
           cache: 'pnpm'
-      - run: pnpm install
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm playwright install chromium
       - run: pnpm run test:e2e
 
   build:
@@ -78,9 +94,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v2
+        with:
+          version: latest
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: lts/*
           cache: 'pnpm'
       - run: pnpm install
       - run: pnpm run build
