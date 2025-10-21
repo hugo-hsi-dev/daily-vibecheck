@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { authClient } from '$lib/auth-client';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 
 	let email = '';
 	let password = '';
@@ -24,7 +25,7 @@
 			});
 
 			// Redirect to dashboard on successful signin
-			await goto('/');
+			await goto(resolve('/'));
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Sign in failed';
 		} finally {
@@ -49,29 +50,25 @@
 			{/if}
 
 			<div>
-				<label for="email" class="block text-sm font-medium text-gray-700">
-					Email address
-				</label>
+				<label for="email" class="block text-sm font-medium text-gray-700"> Email address </label>
 				<input
 					id="email"
 					type="email"
 					required
 					bind:value={email}
-					class="mt-1 block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+					class="mt-1 block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:ring-blue-500 focus:outline-none"
 					placeholder="you@example.com"
 				/>
 			</div>
 
 			<div>
-				<label for="password" class="block text-sm font-medium text-gray-700">
-					Password
-				</label>
+				<label for="password" class="block text-sm font-medium text-gray-700"> Password </label>
 				<input
 					id="password"
 					type="password"
 					required
 					bind:value={password}
-					class="mt-1 block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+					class="mt-1 block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:ring-blue-500 focus:outline-none"
 					placeholder="••••••••"
 				/>
 			</div>
@@ -79,7 +76,7 @@
 			<button
 				type="submit"
 				disabled={loading}
-				class="w-full rounded-md bg-blue-600 py-2 px-4 text-white font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+				class="w-full rounded-md bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
 			>
 				{loading ? 'Signing in...' : 'Sign in'}
 			</button>
@@ -87,7 +84,7 @@
 
 		<p class="text-center text-sm text-gray-600">
 			Don't have an account?
-			<a href="/auth/signup" class="font-medium text-blue-600 hover:text-blue-500">
+			<a href={resolve('/auth/signup')} class="font-medium text-blue-600 hover:text-blue-500">
 				Sign up
 			</a>
 		</p>
