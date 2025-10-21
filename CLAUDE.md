@@ -149,6 +149,278 @@ Priority order for MVP:
 9. PWA setup (vite-pwa)
 10. Testing and polish
 
+## Testing Patterns
+
+### Essential Setup for Component Tests
+
+Every component test file should start with:
+
+```typescript
+import { describe, expect, it, vi } from 'vitest';
+import { render } from 'vitest-browser-svelte';
+import { page } from '@vitest/browser/context';
+import { createRawSnippet } from 'svelte';
+import { flushSync, untrack } from 'svelte';
+```
+
+### The Golden Rule: Always Use Locators
+
+**✅ DO: Use page locators (auto-retry, semantic)**
+
+```typescript
+const button = page.getByRole('button', { name: 'Submit' });
+await button.click();
+```
+
+**❌ DON'T: Use containers (no auto-retry, manual queries)**
+
+```typescript
+const { container } = render(MyButton);
+const button = container.querySelector('button'); // Never do this
+```
+
+### Locator Hierarchy (Use in Order)
+
+1. **Semantic roles** (best for accessibility):
+   - `page.getByRole('button', { name: 'Submit' })`
+   - `page.getByRole('textbox', { name: 'Email' })`
+2. **Labels** (good for forms): `page.getByLabel('Email address')`
+3. **Text content** (good for unique text): `page.getByText('Welcome back')`
+4. **Test IDs** (fallback): `page.getByTestId('submit-button')`
+
+### Handling Multiple Elements (Strict Mode)
+
+Vitest Browser operates in strict mode - if multiple elements match, you'll get an error:
+
+```typescript
+// ❌ FAILS: "strict mode violation" if multiple elements match
+page.getByRole('link', { name: 'Home' });
+
+// ✅ CORRECT: Use .first(), .nth(), .last()
+page.getByRole('link', { name: 'Home' }).first();
+page.getByRole('link', { name: 'Home' }).nth(1); // Second element (0-indexed)
+page.getByRole('link', { name: 'Home' }).last();
+```
+
+### Common Role Confusion Fixes
+
+```typescript
+// ❌ WRONG: Input role doesn't exist
+page.getByRole('input', { name: 'Email' });
+
+// ✅ CORRECT: Use textbox for input elements
+page.getByRole('textbox', { name: 'Email' });
+
+// ❌ WRONG: Looking for link when element has role="button"
+page.getByRole('link', { name: 'Submit' }); // <a role="button">Submit</a>
+
+// ✅ CORRECT: Use the actual role
+page.getByRole('button', { name: 'Submit' });
+```
+
+### Testing Svelte 5 Runes
+
+Use `untrack()` when testing derived state:
+
+```typescript
+it('should handle reactive state', () => {
+	let count = $state(0);
+	let doubled = $derived(count * 2);
+
+	expect(untrack(() => doubled)).toBe(0);
+
+	count = 5;
+	flushSync(); // Ensure derived state updates
+	expect(untrack(() => doubled)).toBe(10);
+});
+```
+
+**Important**: Runes (`$state`, `$derived`) can only be used in `.test.svelte.ts` files, not regular `.ts` files!
+
+### Form Testing Pattern
+
+```typescript
+it('should handle form input and validation', async () => {
+	render(MyForm);
+
+	const email_input = page.getByLabel('Email');
+	await email_input.fill('[email protected]');
+
+	await expect.element(email_input).toHaveValue('[email protected]');
+
+	// Test validation
+	await email_input.fill('invalid-email');
+	await email_input.blur();
+
+	await expect.element(page.getByText('Invalid email format')).toBeInTheDocument();
+});
+```
+
+### Button Click Pattern
+
+```typescript
+it('should handle click events', async () => {
+	const click_handler = vi.fn();
+	render(MyButton, { onclick: click_handler, children: 'Click me' });
+
+	const button = page.getByRole('button', { name: 'Click me' });
+	await button.click();
+
+	expect(click_handler).toHaveBeenCalledOnce();
+});
+
+// For animated elements:
+await button.click({ force: true });
+```
+
+### Common First-Day Issues
+
+1. **"strict mode violation"**: Multiple elements match - use `.first()`, `.nth()`, `.last()`
+2. **Test hanging**: Usually from clicking SvelteKit form submits - test state directly instead
+3. **"Expected 2 arguments, but got 0"**: Mock function signature doesn't match real function
+4. **Wrong roles**: Remember `textbox` not `input`, check actual `role` attributes
+
+### Client-Server Alignment Strategy
+
+Server tests should use real `FormData` and `Request` objects instead of heavy mocking:
+
+```typescript
+// ✅ CORRECT: Real FormData catches field name mismatches
+const form_data = new FormData();
+form_data.append('email', '[email protected]');
+const request = new Request('http://localhost/api/register', {
+	method: 'POST',
+	body: form_data
+});
+
+// ❌ BRITTLE: Heavy mocking hides real issues
+const mock_request = { formData: vi.fn().mockResolvedValue(...) };
+```
+
+### Foundation First Approach
+
+Start with complete test structure using `describe` and `it.skip` to plan comprehensively:
+
+```typescript
+describe('TodoManager Component', () => {
+	describe('Initial Rendering', () => {
+		it('should render empty state', async () => {
+			// Implement first test
+		});
+
+		it.skip('should render with initial todos', async () => {
+			// TODO: Test with pre-populated data
+		});
+	});
+
+	describe('User Interactions', () => {
+		it.skip('should add new todo', async () => {
+			// TODO: Test adding todos
+		});
+
+		it.skip('should delete todo', async () => {
+			// TODO: Test deletion flow
+		});
+	});
+
+	describe('Edge Cases', () => {
+		it.skip('should handle empty data gracefully', async () => {
+			// TODO: Test edge cases
+		});
+	});
+});
+```
+
+**Benefits:**
+
+- Complete picture of all requirements upfront
+- Incremental progress by removing `.skip` as features are implemented
+- No forgotten tests - all edge cases planned from start
+- Flexible coverage - implement tests as needed, not for arbitrary metrics
+
+### Avoid Testing Implementation Details
+
+**❌ DON'T test exact SVG paths or internal markup:**
+
+```typescript
+// Brittle - breaks when icon library updates
+expect(body).toContain('M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z');
+```
+
+**✅ DO test semantic meaning and user experience:**
+
+```typescript
+await expect.element(page.getByRole('img', { name: /success/i })).toBeInTheDocument();
+await expect.element(page.getByTestId('status-icon')).toHaveClass('text-success');
+```
+
+### Testing Checklist
+
+- ✅ Use `describe` and `it` (not `test`) for consistency
+- ✅ Use `it.skip` for planned tests - Foundation First approach
+- ✅ Use `page.getBy*()` locators - never containers
+- ✅ Always await locator assertions: `await expect.element()`
+- ✅ Use `.first()`, `.nth()`, `.last()` for multiple elements
+- ✅ Use `untrack()` for `$derived`: `expect(untrack(() => derived_value))`
+- ✅ Use `force: true` for animations: `await element.click({ force: true })`
+- ✅ Handle role confusion: `textbox` not `input`, check actual `role` attributes
+- ✅ Test user value, not implementation details (no SVG paths!)
+- ✅ Share validation logic between client and server
+- ✅ Use real `FormData`/`Request` objects in server tests
+
+## E2E Testing (Playwright)
+
+### Purpose
+
+E2E tests complete the **Client-Server Alignment Strategy** by testing the full user journey from browser to server and back. They validate:
+
+- Complete form submission flows
+- Client-server integration
+- Real network requests
+- Full user workflows
+
+### Basic E2E Pattern
+
+```typescript
+// e2e/registration.spec.ts
+import { test, expect } from '@playwright/test';
+
+test('user registration flow', async ({ page }) => {
+	await page.goto('/register');
+
+	await page.getByLabel('Email').fill('[email protected]');
+	await page.getByLabel('Password').fill('secure123');
+	await page.getByRole('button', { name: 'Register' }).click();
+
+	// Tests the complete client-server integration
+	await expect(page.getByText('Welcome!')).toBeVisible();
+});
+```
+
+### When to Write E2E Tests
+
+E2E tests are the **final safety net** but are slower and more expensive to run. Use them for:
+
+- Critical user journeys (signup, login, core workflows)
+- Complete form submissions with server validation
+- Multi-step processes (onboarding, checkout, etc.)
+- Integration between multiple pages/features
+
+**Don't** use E2E tests for:
+
+- UI component behavior (use component tests instead)
+- Input validation (test in components)
+- Individual button clicks (use component tests)
+
+### E2E vs Component Tests
+
+| Test Type       | Use For                                | Speed | Cost |
+| --------------- | -------------------------------------- | ----- | ---- |
+| Component Tests | UI behavior, validation, interactions  | Fast  | Low  |
+| E2E Tests       | Full workflows, client-server contract | Slow  | High |
+
+**Strategy**: Write many component tests, few critical E2E tests.
+
 ## Notes for Future Sessions
 
 - **MBTI Algorithm**: Design how to calculate type from accumulated responses (simple majority vote per dimension, or weighted scoring?)
