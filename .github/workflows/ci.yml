@@ -13,9 +13,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v2
+        with:
+          version: latest
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: lts/*
           cache: 'pnpm'
       - run: pnpm install
       - run: pnpm run format:check
@@ -26,9 +28,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v2
+        with:
+          version: latest
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: lts/*
           cache: 'pnpm'
       - run: pnpm install
       - run: pnpm run lint:check
@@ -39,9 +43,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v2
+        with:
+          version: latest
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: lts/*
           cache: 'pnpm'
       - run: pnpm install
       - run: pnpm run check
@@ -52,9 +58,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v2
+        with:
+          version: latest
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: lts/*
           cache: 'pnpm'
       - run: pnpm install
       - run: pnpm run test:unit -- --run
@@ -65,9 +73,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v2
+        with:
+          version: latest
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: lts/*
           cache: 'pnpm'
       - run: pnpm install
       - run: pnpm run test:e2e
@@ -78,9 +88,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v2
+        with:
+          version: latest
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: lts/*
           cache: 'pnpm'
       - run: pnpm install
       - run: pnpm run build
