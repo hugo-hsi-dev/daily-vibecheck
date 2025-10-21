@@ -136,18 +136,38 @@ Each question should target one dimension and one pole (e.g., "Extroversion" vs 
 
 ## Implementation Roadmap
 
-Priority order for MVP:
+### Phase 1: Foundation (Auth + Database)
 
-1. Database schema + better-auth setup
-2. Generate 100 curated MBTI questions (balanced across 4 dimensions)
-3. Authentication pages (signup, login, logout)
-4. Onboarding flow (10 questions → initial type)
-5. MBTI type calculation algorithm
-6. Daily quiz page (3 random questions)
-7. Dashboard with current type display
-8. Historical charts (month/year views)
-9. PWA setup (vite-pwa)
-10. Testing and polish
+1. **Database schema** - Set up PostgreSQL tables for users, questions, responses, type_history
+2. **better-auth setup** - Configure authentication with email/password
+3. **Auth pages** - Build signup/login pages
+
+### Phase 2: Content (Questions + Algorithm)
+
+4. **Curate 100 MBTI questions** - Create balanced questions across E/I, S/N, T/F, J/P poles
+5. **MBTI algorithm** - Implement type calculation logic from responses
+
+### Phase 3: Core Features (User Flows)
+
+6. **Onboarding** - 10 questions → initial type calculation
+7. **Daily quiz** - 3 random questions per day
+8. **Dashboard** - Display current MBTI type
+
+### Phase 4: Polish & Analysis
+
+9. **Historical tracking** - Charts showing type evolution (month/year views)
+10. **PWA setup** - Make it installable on mobile
+11. **Testing** - Comprehensive test coverage
+
+### Recommended Approach
+
+Start with **Phase 1** (Database + Auth), as everything else depends on it:
+
+- Database schema provides data persistence
+- better-auth handles user management
+- Auth pages enable user access
+
+Once Phase 1 is solid, Phase 2 (questions + algorithm) is critical as it's the core logic of the app.
 
 ## Testing Patterns
 
