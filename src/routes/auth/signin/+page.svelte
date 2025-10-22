@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { signin } from '../actions.remote';
+	import { signin } from '../auth.remote';
 	import { resolve } from '$app/paths';
 </script>
 
