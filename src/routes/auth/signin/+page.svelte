@@ -1,37 +1,6 @@
 <script lang="ts">
-	import { authClient } from '$lib/auth-client';
-	import { goto } from '$app/navigation';
+	import { signin } from '../actions.remote';
 	import { resolve } from '$app/paths';
-
-	let email = $state('');
-	let password = $state('');
-	let error = $state('');
-	let loading = $state(false);
-
-	async function handleSignin() {
-		error = '';
-
-		if (!email || !password) {
-			error = 'Email and password are required';
-			return;
-		}
-
-		loading = true;
-
-		try {
-			await authClient.signIn.email({
-				email,
-				password
-			});
-
-			// Redirect to dashboard on successful signin
-			await goto(resolve('/'));
-		} catch (err) {
-			error = err instanceof Error ? err.message : 'Sign in failed';
-		} finally {
-			loading = false;
-		}
-	}
 </script>
 
 <div class="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12">
@@ -42,43 +11,44 @@
 			</h2>
 		</div>
 
-		<form class="space-y-6" on:submit|preventDefault={handleSignin}>
-			{#if error}
+		<form class="space-y-6" {...signin}>
+			<!-- Form-level errors -->
+			{#each signin.fields.allIssues() as issue (issue)}
 				<div class="rounded-md bg-red-50 p-4">
-					<p class="text-sm font-medium text-red-800">{error}</p>
+					<p class="text-sm font-medium text-red-800">{issue.message}</p>
 				</div>
-			{/if}
+			{/each}
 
 			<div>
 				<label for="email" class="block text-sm font-medium text-gray-700"> Email address </label>
 				<input
-					id="email"
-					type="email"
-					required
-					bind:value={email}
+					{...signin.fields.email.as('email')}
 					class="mt-1 block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:ring-blue-500 focus:outline-none"
 					placeholder="you@example.com"
 				/>
+				{#each signin.fields.email.issues() as issue (issue)}
+					<p class="mt-1 text-sm text-red-600">{issue.message}</p>
+				{/each}
 			</div>
 
 			<div>
 				<label for="password" class="block text-sm font-medium text-gray-700"> Password </label>
 				<input
-					id="password"
-					type="password"
-					required
-					bind:value={password}
+					{...signin.fields.password.as('password')}
 					class="mt-1 block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:ring-blue-500 focus:outline-none"
 					placeholder="••••••••"
 				/>
+				{#each signin.fields.password.issues() as issue (issue)}
+					<p class="mt-1 text-sm text-red-600">{issue.message}</p>
+				{/each}
 			</div>
 
 			<button
 				type="submit"
-				disabled={loading}
+				disabled={signin.pending !== 0}
 				class="w-full rounded-md bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
 			>
-				{loading ? 'Signing in...' : 'Sign in'}
+				{signin.pending !== 0 ? 'Signing in...' : 'Sign in'}
 			</button>
 		</form>
 

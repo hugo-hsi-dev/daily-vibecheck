@@ -107,9 +107,385 @@ Daily Vibecheck is a SvelteKit application using TypeScript, Tailwind CSS v4, an
 - Uses Svelte 5 with runes (modern reactivity)
 - `+page.svelte` - Page components
 - `+layout.svelte` - Layout components
-- `+page.server.ts` / `+layout.server.ts` - Server-side load functions and actions
-- `+page.ts` / `+layout.ts` - Universal load functions
 - Server-only code must be in `src/lib/server/` or `*.server.ts` files
+
+**IMPORTANT:** This project uses **remote functions** instead of traditional load functions (`+page.server.ts`, `+page.ts`) and form actions. Remote functions provide better type safety, more flexible DX, and can be called from anywhere in your application.
+
+### Remote Functions - Mandatory Usage
+
+**This project exclusively uses SvelteKit remote functions for all server communication.** No load functions or form actions should be used.
+
+Remote functions are type-safe server functions exported from `.remote.ts` files that can be called from anywhere in your application. They execute on the server while being callable like regular functions from components.
+
+**Enable in `svelte.config.js`:**
+
+```javascript
+const config = {
+	kit: {
+		experimental: {
+			remoteFunctions: true
+		}
+	},
+	compilerOptions: {
+		experimental: {
+			async: true
+		}
+	}
+};
+```
+
+#### Query Functions (Read Data)
+
+Use `query()` for fetching dynamic data from the server. Queries return Promise-like objects with `loading`, `error`, and `current` properties.
+
+**✅ CORRECT: Query function in `.remote.ts` file**
+
+```typescript
+// src/routes/blog/data.remote.ts
+import { query } from '$app/server';
+import * as db from '$lib/server/database';
+
+export const getPosts = query(async () => {
+	const posts = await db.sql`
+		SELECT title, slug FROM post ORDER BY published_at DESC
+	`;
+	return posts;
+});
+```
+
+**Component usage with await:**
+
+```svelte
+<script lang="ts">
+	import { getPosts } from './data.remote';
+</script>
+
+<ul>
+	{#each await getPosts() as { title, slug }}
+		<li><a href="/blog/{slug}">{title}</a></li>
+	{/each}
+</ul>
+```
+
+**Alternative with loading states:**
+
+```svelte
+<script lang="ts">
+	import { getPosts } from './data.remote';
+	const posts_query = getPosts();
+</script>
+
+{#if posts_query.error}
+	<p>Error loading posts</p>
+{:else if posts_query.loading}
+	<p>Loading...</p>
+{:else}
+	<ul>
+		{#each posts_query.current as post}
+			<li>{post.title}</li>
+		{/each}
+	</ul>
+{/if}
+```
+
+**Query with arguments (requires validation):**
+
+```typescript
+import { query } from '$app/server';
+import * as v from 'valibot';
+import * as db from '$lib/server/database';
+
+export const getPost = query(
+	v.object({ slug: v.string() }),
+	async ({ slug }) => {
+		const post = await db.sql`SELECT * FROM post WHERE slug = ${slug}`;
+		return post;
+	}
+);
+```
+
+**Note:** This project uses **Valibot** for schema validation (not Zod) due to its superior bundle size characteristics - 90% smaller bundles for typical form validation use cases.
+
+**Cross-field validation** (e.g., password confirmation):
+
+```typescript
+import * as v from 'valibot';
+
+const signupSchema = v.pipe(
+	v.object({
+		password: v.pipe(v.string(), v.minLength(8)),
+		confirmPassword: v.string()
+	}),
+	v.forward(
+		v.partialCheck(
+			[['password'], ['confirmPassword']],
+			(input) => input.password === input.confirmPassword,
+			'Passwords do not match'
+		),
+		['confirmPassword']  // Forward error to confirmPassword field
+	)
+);
+```
+
+Use `v.forward()` with `v.partialCheck()` to validate that two fields match and attach the error message to a specific field.
+
+#### Form Functions (Submit Data with Forms)
+
+Use `form()` for handling form submissions with validation and progressive enhancement.
+
+**✅ CORRECT: Form function with validation and error handling**
+
+```typescript
+// src/routes/auth/actions.remote.ts
+import { form } from '$app/server';
+import * as v from 'valibot';
+import { APIError } from 'better-auth/api';
+import { auth } from '$lib/auth';
+
+export const signup = form(
+	v.object({
+		email: v.pipe(v.string(), v.email()),
+		password: v.pipe(v.string(), v.minLength(8))
+	}),
+	async (data, { invalid }) => {
+		try {
+			const result = await auth.api.signUpEmail({
+				body: {
+					email: data.email,
+					password: data.password,
+					name: data.email.split('@')[0]
+				}
+			});
+
+			return { success: true, user: result.user };
+		} catch (error) {
+			// Handle better-auth APIError
+			if (error instanceof APIError) {
+				if (error.message.includes('already exists')) {
+					invalid.email('An account with this email already exists');
+				} else {
+					invalid(error.message || 'Sign up failed');
+				}
+			} else {
+				invalid('An unexpected error occurred. Please try again.');
+			}
+		}
+	}
+);
+```
+
+**Error Handling with `invalid()`:**
+
+The `invalid()` function is used to handle validation failures:
+- `invalid.fieldName(message)` - Field-specific errors (type-safe)
+- `invalid(message)` - Form-level errors (accessible via `fields.allIssues()`)
+- Automatically sets `aria-invalid` attributes on form fields
+- Prevents form submission when called
+
+**Component usage (spreads onto form element):**
+
+```svelte
+<script lang="ts">
+	import { signup } from './actions.remote';
+</script>
+
+<form {...signup}>
+	<!-- Form-level errors -->
+	{#each signup.fields.allIssues() as issue (issue)}
+		<p class="error">{issue.message}</p>
+	{/each}
+
+	<input type="email" name="email" required />
+	{#each signup.fields.email.issues() as issue (issue)}
+		<p class="error">{issue.message}</p>
+	{/each}
+
+	<input type="password" name="password" required />
+	{#each signup.fields.password.issues() as issue (issue)}
+		<p class="error">{issue.message}</p>
+	{/each}
+
+	<button type="submit" disabled={signup.pending !== 0}>
+		{signup.pending !== 0 ? 'Signing up...' : 'Sign up'}
+	</button>
+</form>
+```
+
+**Key points:**
+- Import and spread the remote function directly: `{...signup}`
+- Use `pending !== 0` to check if form is submitting
+- Add `(issue)` keys to `{#each}` blocks for proper reactivity
+- No need to call the function or manage state manually
+
+#### Command Functions (Imperative Actions)
+
+Use `command()` for data mutations that aren't tied to forms (e.g., button clicks, programmatic actions).
+
+**✅ CORRECT: Command function**
+
+```typescript
+// src/routes/posts/actions.remote.ts
+import { command } from '$app/server';
+import * as v from 'valibot';
+import * as db from '$lib/server/database';
+
+export const addLike = command(
+	v.string(),
+	async (post_id) => {
+		await db.sql`UPDATE post SET likes = likes + 1 WHERE id = ${post_id}`;
+		return { success: true };
+	}
+);
+```
+
+**Component usage (call from event handlers):**
+
+```svelte
+<script lang="ts">
+	import { addLike } from './actions.remote';
+
+	interface Props {
+		post_id: string;
+	}
+
+	let { post_id }: Props = $props();
+
+	async function handle_like() {
+		await addLike(post_id);
+	}
+</script>
+
+<button onclick={handle_like}>Like</button>
+```
+
+#### Why Remote Functions?
+
+1. **Type safety** - Full TypeScript inference from server to client
+2. **Flexible** - Call from anywhere, not just load functions or forms
+3. **DX** - No need for separate API routes or manual fetch calls
+4. **Validation** - Built-in schema validation with Valibot/Zod
+5. **Progressive enhancement** - Forms work without JavaScript
+
+**❌ NEVER use these outdated patterns:**
+
+```typescript
+// ❌ DON'T: Load functions in +page.server.ts
+export const load = async () => { ... };
+
+// ❌ DON'T: Form actions in +page.server.ts
+export const actions = {
+	default: async ({ request }) => { ... }
+};
+
+// ❌ DON'T: Manual API routes for simple data fetching
+// src/routes/api/posts/+server.ts
+export async function GET() { ... }
+```
+
+**✅ INSTEAD: Use remote functions**
+
+```typescript
+// ✅ DO: Remote functions in .remote.ts files
+export const getPosts = query(async () => { ... });
+export const createPost = form(schema, async (data) => { ... });
+export const deletePost = command(schema, async (id) => { ... });
+```
+
+### Better-Auth Integration
+
+**Do NOT use `@better-auth/svelte` client** - it uses legacy Svelte stores that will be deprecated. Instead, use remote functions to interact with the `auth` object from `src/lib/auth.ts`.
+
+**❌ WRONG: Using better-auth Svelte client**
+
+```typescript
+import { createAuthClient } from '@better-auth/svelte';
+const client = createAuthClient(); // Uses stores - avoid!
+```
+
+**✅ CORRECT: Use remote functions with server-side auth**
+
+```typescript
+// src/lib/auth/session.remote.ts
+import { query } from '$app/server';
+import { auth } from '$lib/auth';
+
+export const getSession = query(async (event) => {
+	const session = await auth.api.getSession({ headers: event.request.headers });
+	return session;
+});
+```
+
+**Component usage:**
+
+```svelte
+<script lang="ts">
+	import { getSession } from '$lib/auth/session.remote';
+	const session = getSession();
+</script>
+
+{#if session.loading}
+	<p>Loading...</p>
+{:else if session.current?.user}
+	<p>Welcome, {session.current.user.email}!</p>
+{:else}
+	<a href="/signin">Sign in</a>
+{/if}
+```
+
+### Svelte 5 Runes - Mandatory Usage
+
+**This project exclusively uses Svelte 5 runes for all reactive state.** No legacy Svelte code (pre-runes) should be written.
+
+**✅ CORRECT: Always use runes for reactive state**
+
+```typescript
+<script lang="ts">
+	// Reactive state
+	let count = $state(0);
+	let name = $state('');
+	let items = $state<string[]>([]);
+	
+	// Derived state
+	let doubled = $derived(count * 2);
+	let isEmpty = $derived(items.length === 0);
+	
+	// Effects
+	$effect(() => {
+		console.log(`Count is now ${count}`);
+	});
+</script>
+```
+
+**❌ WRONG: Never use legacy let declarations for reactive state**
+
+```typescript
+<script lang="ts">
+	// This is old Svelte style - DO NOT USE
+	let count = 0;
+	let name = '';
+	let items = [];
+	
+	// This won't work properly in Svelte 5
+	$: doubled = count * 2;
+</script>
+```
+
+**Key Runes:**
+
+- `$state()` - Reactive state (replaces `let` for reactive variables)
+- `$state.raw()` - Non-deep reactive state (for large objects/arrays)
+- `$derived()` - Computed values (replaces `$:` reactive statements)
+- `$effect()` - Side effects (replaces `$:` for side effects)
+- `$props()` - Component props (replaces `export let`)
+- `$bindable()` - Two-way bindable props
+
+**Why runes-only?**
+
+1. **Modern Svelte 5** - Runes are the future of Svelte, legacy syntax is deprecated
+2. **Explicit reactivity** - Clear which variables are reactive vs regular
+3. **Better performance** - Fine-grained reactivity tracking
+4. **TypeScript integration** - Better type inference with runes
+5. **Consistency** - Single way to handle reactivity across the entire codebase
 
 ### Type-Safe Routing
 
