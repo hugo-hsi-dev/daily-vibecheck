@@ -195,13 +195,10 @@ import { query } from '$app/server';
 import * as v from 'valibot';
 import * as db from '$lib/server/database';
 
-export const getPost = query(
-	v.object({ slug: v.string() }),
-	async ({ slug }) => {
-		const post = await db.sql`SELECT * FROM post WHERE slug = ${slug}`;
-		return post;
-	}
-);
+export const getPost = query(v.object({ slug: v.string() }), async ({ slug }) => {
+	const post = await db.sql`SELECT * FROM post WHERE slug = ${slug}`;
+	return post;
+});
 ```
 
 **Note:** This project uses **Valibot** for schema validation (not Zod) due to its superior bundle size characteristics - 90% smaller bundles for typical form validation use cases.
@@ -222,7 +219,7 @@ const signupSchema = v.pipe(
 			(input) => input.password === input.confirmPassword,
 			'Passwords do not match'
 		),
-		['confirmPassword']  // Forward error to confirmPassword field
+		['confirmPassword'] // Forward error to confirmPassword field
 	)
 );
 ```
@@ -277,6 +274,7 @@ export const signup = form(
 **Error Handling with `invalid()`:**
 
 The `invalid()` function is used to handle validation failures:
+
 - `invalid.fieldName(message)` - Field-specific errors (type-safe)
 - `invalid(message)` - Form-level errors (accessible via `fields.allIssues()`)
 - Automatically sets `aria-invalid` attributes on form fields
@@ -312,6 +310,7 @@ The `invalid()` function is used to handle validation failures:
 ```
 
 **Key points:**
+
 - Import and spread the remote function directly: `{...signup}`
 - Use `pending !== 0` to check if form is submitting
 - Add `(issue)` keys to `{#each}` blocks for proper reactivity
@@ -329,13 +328,10 @@ import { command } from '$app/server';
 import * as v from 'valibot';
 import * as db from '$lib/server/database';
 
-export const addLike = command(
-	v.string(),
-	async (post_id) => {
-		await db.sql`UPDATE post SET likes = likes + 1 WHERE id = ${post_id}`;
-		return { success: true };
-	}
-);
+export const addLike = command(v.string(), async (post_id) => {
+	await db.sql`UPDATE post SET likes = likes + 1 WHERE id = ${post_id}`;
+	return { success: true };
+});
 ```
 
 **Component usage (call from event handlers):**
@@ -444,11 +440,11 @@ export const getSession = query(async (event) => {
 	let count = $state(0);
 	let name = $state('');
 	let items = $state<string[]>([]);
-	
+
 	// Derived state
 	let doubled = $derived(count * 2);
 	let isEmpty = $derived(items.length === 0);
-	
+
 	// Effects
 	$effect(() => {
 		console.log(`Count is now ${count}`);
@@ -464,7 +460,7 @@ export const getSession = query(async (event) => {
 	let count = 0;
 	let name = '';
 	let items = [];
-	
+
 	// This won't work properly in Svelte 5
 	$: doubled = count * 2;
 </script>
