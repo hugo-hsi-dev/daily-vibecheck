@@ -3,10 +3,10 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 
-	let email = '';
-	let password = '';
-	let error = '';
-	let loading = false;
+	let email = $state('');
+	let password = $state('');
+	let error = $state('');
+	let loading = $state(false);
 
 	async function handleSignin() {
 		error = '';

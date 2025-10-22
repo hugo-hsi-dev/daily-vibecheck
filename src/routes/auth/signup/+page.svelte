@@ -3,12 +3,12 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 
-	let email = '';
-	let password = '';
-	let confirmPassword = '';
-	let name = '';
-	let error = '';
-	let loading = false;
+	let email = $state('');
+	let password = $state('');
+	let confirmPassword = $state('');
+	let name = $state('');
+	let error = $state('');
+	let loading = $state(false);
 
 	async function handleSignup() {
 		error = '';
