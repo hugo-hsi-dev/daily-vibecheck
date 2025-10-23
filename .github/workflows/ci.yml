@@ -6,10 +6,6 @@ on:
   pull_request:
     branches: [main]
 
-env:
-  # We only install Chromium manually
-  PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
-
 jobs:
   format:
     name: Format
@@ -56,8 +52,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm run check
 
-  unit-test:
-    name: Unit Tests
+  test:
+    name: Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -70,39 +66,7 @@ jobs:
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
       - run: pnpm playwright install chromium
-      - run: pnpm run test:unit -- --run
-
-  e2e-test:
-    name: E2E Tests
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:latest
-        env:
-          POSTGRES_USER: root
-          POSTGRES_PASSWORD: mysecretpassword
-          POSTGRES_DB: test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-    env:
-      DATABASE_URL: 'postgres://root:mysecretpassword@localhost:5432/test'
-    steps:
-      - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v4
-        with:
-          version: latest
-      - uses: actions/setup-node@v6
-        with:
-          node-version: lts/*
-          cache: 'pnpm'
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm playwright install chromium
-      - run: pnpm run test:e2e
+      - run: pnpm run test
 
   build:
     name: Build
