@@ -141,6 +141,7 @@ src/lib/[feature]/
 #### Example Features
 
 **Auth feature:**
+
 ```
 src/lib/auth/
 ├── components/
@@ -154,6 +155,7 @@ src/lib/auth/
 ```
 
 **Questions feature:**
+
 ```
 src/lib/questions/
 ├── components/
@@ -196,8 +198,8 @@ import { questions, responses } from '$lib/server/db/schema';
 import { users } from '$lib/server/db/auth-schema';
 
 export async function calculateUserType(userId: string) {
-  const user_responses = await db.select().from(responses).where(eq(responses.userId, userId));
-  // ...
+	const user_responses = await db.select().from(responses).where(eq(responses.userId, userId));
+	// ...
 }
 ```
 
@@ -778,19 +780,19 @@ import { getUser } from './queries.remote'; // This will fail!
 // ✅ DO: Test via E2E
 // e2e/auth.spec.ts
 test('user can view their profile', async ({ page }) => {
-  // Full browser test
+	// Full browser test
 });
 
 // ✅ DO: Extract complex logic and test separately
 // src/lib/questions/calculateType.logic.ts
 export function calculateMBTIType(responses) {
-  // Complex algorithm
+	// Complex algorithm
 }
 
 // src/lib/questions/calculateType.logic.test.ts
 import { calculateMBTIType } from './calculateType.logic';
 test('calculates INTJ correctly', () => {
-  // Test pure logic
+	// Test pure logic
 });
 ```
 
@@ -801,7 +803,7 @@ test('calculates INTJ correctly', () => {
 ```typescript
 // ✅ DO: Mock query functions
 vi.mock('../remotes/queries.remote', () => ({
-  getUser: vi.fn(() => Promise.resolve({ name: 'Test User', email: 'test@example.com' }))
+	getUser: vi.fn(() => Promise.resolve({ name: 'Test User', email: 'test@example.com' }))
 }));
 
 render(UserDisplay);
@@ -814,7 +816,7 @@ await expect.element(page.getByText('Test User')).toBeInTheDocument();
 // ❌ DON'T: Try to unit test form components
 // Mocking form() objects is extremely difficult due to snippet complexity
 it.skip('should render sign-in form', () => {
-  // Form components should be tested via E2E instead
+	// Form components should be tested via E2E instead
 });
 ```
 
@@ -823,13 +825,13 @@ it.skip('should render sign-in form', () => {
 ```typescript
 // e2e/auth.spec.ts
 test('user can sign in', async ({ page }) => {
-  await page.goto('/auth/signin');
-  
-  await page.getByLabel('Email').fill('test@example.com');
-  await page.getByLabel('Password').fill('password123');
-  await page.getByRole('button', { name: 'Sign in' }).click();
-  
-  await expect(page).toHaveURL('/');
+	await page.goto('/auth/signin');
+
+	await page.getByLabel('Email').fill('test@example.com');
+	await page.getByLabel('Password').fill('password123');
+	await page.getByRole('button', { name: 'Sign in' }).click();
+
+	await expect(page).toHaveURL('/');
 });
 ```
 
