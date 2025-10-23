@@ -86,6 +86,189 @@ Daily Vibecheck is a SvelteKit application using TypeScript, Tailwind CSS v4, an
 - `src/lib/server/db/` - Database configuration and schema
 - `e2e/` - Playwright end-to-end tests
 
+### Feature-Based Architecture
+
+This project uses **feature-based organization** rather than organizing by file type (e.g., `components/`, `utils/`, `remote-functions/`). Each feature is a self-contained module with strict boundaries that prevent cross-feature dependencies.
+
+**Philosophy:**
+
+- Features are organized by domain (e.g., `auth`, `questions`, `dashboard`)
+- All related files for a feature live together in `src/lib/[feature]/`
+- Features **cannot import from each other** - this enforces isolation
+- Only **routes** (`src/routes/`) can compose multiple features together
+- Keeps the codebase cohesive and makes refactoring easier
+
+#### Standard Feature Structure
+
+Every feature follows this structure:
+
+```
+src/lib/[feature]/
+├── components/          # UI components (always)
+├── remotes/             # Remote functions (always)
+│   ├── queries.remote.ts    # Query functions (read data)
+│   └── mutations.remote.ts  # Form and command functions (write data)
+├── schemas.ts           # Zod validation schemas (always, shared client/server)
+├── utils.ts             # Pure helper functions (optional)
+├── constants.ts         # Feature-specific constants (optional)
+├── types.ts             # Shared TypeScript types (rare - use type inference!)
+└── *.server.ts          # Server-only code (optional, as needed)
+```
+
+**File Type Guidelines:**
+
+- **`components/`** - Svelte UI components used by this feature
+- **`remotes/`** - Remote functions folder (always present)
+  - **`queries.remote.ts`** - Query functions for fetching data (read-only)
+    - Usage: `import { getUser } from '$lib/auth/remotes/queries'`
+  - **`mutations.remote.ts`** - Form and command functions for modifying data
+    - Usage: `import { signup, signin } from '$lib/auth/remotes/mutations'`
+- **`schemas.ts`** - Zod validation schemas (used by remote functions and components)
+  - Shared between client and server (no duplication)
+  - No `.server.ts` suffix because validation rules are identical
+- **`utils.ts`** - Pure utility functions specific to this feature
+  - Examples: `formatMBTIType()`, `calculateTypeFromResponses()`
+- **`constants.ts`** - Static configuration values
+  - Examples: `MBTI_DIMENSIONS`, `QUESTIONS_PER_DAY = 3`
+- **`types.ts`** - Shared TypeScript types/interfaces (rarely needed)
+  - Most types are inferred from schemas, database, or remote functions
+  - Only create if you have types that can't be inferred
+- **`*.server.ts`** - Server-only files (e.g., `auth.server.ts`, `service.server.ts`)
+  - Never bundled for client - safe for secrets, sensitive logic
+  - Examples: better-auth instances, database queries, business logic
+  - Naming: `[feature].server.ts` or `[name].server.ts` (e.g., `queries.server.ts`)
+
+#### Example Features
+
+**Auth feature:**
+```
+src/lib/auth/
+├── components/
+│   ├── sign-in-form.svelte
+│   └── sign-up-form.svelte
+├── remotes/
+│   ├── queries.remote.ts      # getUser, validateUser
+│   └── mutations.remote.ts    # signup, signin
+├── auth.server.ts             # Better-auth instance
+└── schemas.ts                 # signInSchema, signUpSchema
+```
+
+**Questions feature:**
+```
+src/lib/questions/
+├── components/
+│   ├── question-card.svelte
+│   └── answer-buttons.svelte
+├── remotes/
+│   ├── queries.remote.ts      # getDailyQuestions, getTypeHistory
+│   └── mutations.remote.ts    # submitAnswer, calculateType
+├── service.server.ts          # MBTI calculation algorithm
+├── schemas.ts                 # answerSchema, questionSchema
+└── constants.ts               # MBTI_DIMENSIONS, QUESTIONS_PER_DAY
+```
+
+#### Database Schema Organization
+
+The database layer is **centralized** but with special handling for better-auth:
+
+```
+src/lib/server/db/
+├── index.ts              # DB client (postgres-js + Drizzle)
+├── schema.ts             # Application tables (hand-written)
+│                         # Tables: questions, responses, type_history, etc.
+└── auth-schema.ts        # Better-auth generated tables (auto-generated)
+                          # Tables: users, sessions, accounts, verifications
+```
+
+**Why separate?**
+
+- Better-auth auto-generates and manages its schema - keep it isolated
+- Application schema is hand-written and evolved by the team
+- Prevents accidental edits to auto-generated auth tables
+- Different migration workflows (auth migrations vs app migrations)
+
+**All features import the same DB client:**
+
+```typescript
+// src/lib/questions/service.server.ts
+import { db } from '$lib/server/db';
+import { questions, responses } from '$lib/server/db/schema';
+import { users } from '$lib/server/db/auth-schema';
+
+export async function calculateUserType(userId: string) {
+  const user_responses = await db.select().from(responses).where(eq(responses.userId, userId));
+  // ...
+}
+```
+
+#### Routes as the Composition Layer
+
+Routes (`src/routes/`) are where features come together. Routes import components and remote functions from features and compose them.
+
+**Example: Auth signin route**
+
+```svelte
+<!-- src/routes/auth/signin/+page.svelte -->
+<script lang="ts">
+	import SignInForm from '$lib/auth/components/sign-in-form.svelte';
+</script>
+
+<div class="signin-page">
+	<SignInForm />
+</div>
+```
+
+```svelte
+<!-- src/lib/auth/components/sign-in-form.svelte -->
+<script lang="ts">
+	import { signin } from '$lib/auth/remotes/mutations';
+	import { signInSchema } from '$lib/auth/schemas';
+</script>
+
+<form {...signin}>
+	<!-- Form implementation -->
+</form>
+```
+
+#### Feature Isolation Rules
+
+**✅ ALLOWED:**
+
+```typescript
+// Feature imports from itself
+import { getDailyQuestions } from '$lib/questions/remotes/queries';
+import { submitAnswer } from '$lib/questions/remotes/mutations';
+import QuestionCard from '$lib/questions/components/question-card.svelte';
+
+// Route imports from multiple features
+import SignInForm from '$lib/auth/components/sign-in-form.svelte';
+import { getUser } from '$lib/auth/remotes/queries';
+import { signin } from '$lib/auth/remotes/mutations';
+
+// All features can import DB client
+import { db } from '$lib/server/db';
+```
+
+**❌ NOT ALLOWED:**
+
+```typescript
+// ❌ Feature importing from another feature
+// src/lib/dashboard/index.remote.ts
+import { getDailyQuestions } from '$lib/questions'; // NO!
+
+// ❌ Cross-feature component imports
+// src/lib/auth/components/sign-in-form.svelte
+import QuestionCard from '$lib/questions/components/question-card.svelte'; // NO!
+```
+
+**Solution for cross-feature logic:**
+
+If you need shared logic between features, consider:
+
+1. **Move to a shared feature** - Create `src/lib/shared/` for truly cross-cutting concerns
+2. **Move to server layer** - Put shared logic in `src/lib/server/` for server-only operations
+3. **Compose in routes** - Let routes coordinate between features, not the features themselves
+
 ### Key Configuration Files
 
 - `svelte.config.js` - SvelteKit configuration with Node adapter
@@ -192,39 +375,35 @@ export const getPosts = query(async () => {
 
 ```typescript
 import { query } from '$app/server';
-import * as v from 'valibot';
-import * as db from '$lib/server/database';
+import { z } from 'zod';
 
-export const getPost = query(v.object({ slug: v.string() }), async ({ slug }) => {
-	const post = await db.sql`SELECT * FROM post WHERE slug = ${slug}`;
+export const getPost = query(z.object({ slug: z.string() }), async ({ slug }) => {
+	const post = await db.query.posts.findFirst({
+		where: (table, { eq }) => eq(table.slug, slug)
+	});
 	return post;
 });
 ```
 
-**Note:** This project uses **Valibot** for schema validation (not Zod) due to its superior bundle size characteristics - 90% smaller bundles for typical form validation use cases.
+**Note:** This project uses **Zod** for schema validation across both client and server code.
 
 **Cross-field validation** (e.g., password confirmation):
 
 ```typescript
-import * as v from 'valibot';
+import { z } from 'zod';
 
-const signupSchema = v.pipe(
-	v.object({
-		password: v.pipe(v.string(), v.minLength(8)),
-		confirmPassword: v.string()
-	}),
-	v.forward(
-		v.partialCheck(
-			[['password'], ['confirmPassword']],
-			(input) => input.password === input.confirmPassword,
-			'Passwords do not match'
-		),
-		['confirmPassword'] // Forward error to confirmPassword field
-	)
-);
+const signupSchema = z
+	.object({
+		password: z.string().min(8, 'Password must be at least 8 characters'),
+		confirmPassword: z.string().min(1, 'Please confirm your password')
+	})
+	.refine((data) => data.password === data.confirmPassword, {
+		message: 'Passwords do not match',
+		path: ['confirmPassword'] // Attach error to confirmPassword field
+	});
 ```
 
-Use `v.forward()` with `v.partialCheck()` to validate that two fields match and attach the error message to a specific field.
+Use `.refine()` with the `path` option to validate that two fields match and attach the error message to a specific field.
 
 #### Form Functions (Submit Data with Forms)
 
@@ -233,42 +412,37 @@ Use `form()` for handling form submissions with validation and progressive enhan
 **✅ CORRECT: Form function with validation and error handling**
 
 ```typescript
-// src/routes/auth/actions.remote.ts
+// src/lib/auth/index.remote.ts
 import { form } from '$app/server';
-import * as v from 'valibot';
+import { z } from 'zod';
 import { APIError } from 'better-auth/api';
 import { auth } from '$lib/auth';
+import { signupSchema } from './schemas';
 
-export const signup = form(
-	v.object({
-		email: v.pipe(v.string(), v.email()),
-		password: v.pipe(v.string(), v.minLength(8))
-	}),
-	async (data, { invalid }) => {
-		try {
-			const result = await auth.api.signUpEmail({
-				body: {
-					email: data.email,
-					password: data.password,
-					name: data.email.split('@')[0]
-				}
-			});
-
-			return { success: true, user: result.user };
-		} catch (error) {
-			// Handle better-auth APIError
-			if (error instanceof APIError) {
-				if (error.message.includes('already exists')) {
-					invalid.email('An account with this email already exists');
-				} else {
-					invalid(error.message || 'Sign up failed');
-				}
-			} else {
-				invalid('An unexpected error occurred. Please try again.');
+export const signup = form(signupSchema, async (data, { invalid }) => {
+	try {
+		await auth.api.signUpEmail({
+			body: {
+				name: data.name,
+				email: data.email,
+				password: data.password
 			}
+		});
+
+		return { success: true };
+	} catch (error) {
+		// Handle better-auth APIError
+		if (error instanceof APIError) {
+			if (error.message.includes('already exists')) {
+				invalid.email('An account with this email already exists');
+			} else {
+				invalid(error.message || 'Sign up failed');
+			}
+		} else {
+			invalid('An unexpected error occurred. Please try again.');
 		}
 	}
-);
+});
 ```
 
 **Error Handling with `invalid()`:**
@@ -283,8 +457,9 @@ The `invalid()` function is used to handle validation failures:
 **Component usage (spreads onto form element):**
 
 ```svelte
+<!-- src/lib/auth/components/sign-up-form.svelte -->
 <script lang="ts">
-	import { signup } from './actions.remote';
+	import { signup } from '../index.remote';
 </script>
 
 <form {...signup}>
