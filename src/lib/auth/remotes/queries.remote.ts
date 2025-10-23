@@ -9,7 +9,7 @@ export const getUser = query(() => {
 export const validateUser = query(async () => {
 	const user = await getUser();
 	if (!user) {
-		return error(401, 'Unauthorized');
+		throw error(401, 'Unauthorized');
 	}
 	return user;
 });

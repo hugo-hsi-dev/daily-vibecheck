@@ -748,6 +748,91 @@ Once Phase 1 is solid, Phase 2 (questions + algorithm) is critical as it's the c
 
 ## Testing Patterns
 
+### Testing Strategy Overview
+
+**What to Test:**
+
+1. **Component Tests (Unit)** - UI behavior, validation, user interactions
+   - Use Vitest Browser Mode with Playwright
+   - Test user-facing behavior, not implementation details
+   - Mock as little as possible
+
+2. **E2E Tests (Integration)** - Full user flows from browser to database
+   - Use Playwright for complete workflows
+   - Test critical paths: signup, login, core features
+   - No mocking - test against real services
+
+3. **Remote Functions** - **Do NOT unit test** remote functions directly
+   - Remote functions are SvelteKit integration points
+   - Cannot be easily mocked due to SvelteKit's validation
+   - Test via E2E tests instead
+   - If remote function has complex business logic, extract it to a separate `.logic.ts` file and unit test that
+
+**Testing Remote Functions:**
+
+```typescript
+// ❌ DON'T: Try to unit test remote functions
+// src/lib/auth/remotes/queries.test.ts
+import { getUser } from './queries.remote'; // This will fail!
+
+// ✅ DO: Test via E2E
+// e2e/auth.spec.ts
+test('user can view their profile', async ({ page }) => {
+  // Full browser test
+});
+
+// ✅ DO: Extract complex logic and test separately
+// src/lib/questions/calculateType.logic.ts
+export function calculateMBTIType(responses) {
+  // Complex algorithm
+}
+
+// src/lib/questions/calculateType.logic.test.ts
+import { calculateMBTIType } from './calculateType.logic';
+test('calculates INTJ correctly', () => {
+  // Test pure logic
+});
+```
+
+**Testing Components That Use Remote Functions:**
+
+**Components using query() functions** can be tested by mocking the query:
+
+```typescript
+// ✅ DO: Mock query functions
+vi.mock('../remotes/queries.remote', () => ({
+  getUser: vi.fn(() => Promise.resolve({ name: 'Test User', email: 'test@example.com' }))
+}));
+
+render(UserDisplay);
+await expect.element(page.getByText('Test User')).toBeInTheDocument();
+```
+
+**Components using form() functions** are difficult to test in isolation because `form()` returns complex objects with Svelte snippets that must be spread onto `<form>` elements. Mocking these leads to deep Svelte internal errors.
+
+```typescript
+// ❌ DON'T: Try to unit test form components
+// Mocking form() objects is extremely difficult due to snippet complexity
+it.skip('should render sign-in form', () => {
+  // Form components should be tested via E2E instead
+});
+```
+
+**✅ DO: Test form components via E2E tests:**
+
+```typescript
+// e2e/auth.spec.ts
+test('user can sign in', async ({ page }) => {
+  await page.goto('/auth/signin');
+  
+  await page.getByLabel('Email').fill('test@example.com');
+  await page.getByLabel('Password').fill('password123');
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  
+  await expect(page).toHaveURL('/');
+});
+```
+
 ### Essential Setup for Component Tests
 
 Every component test file should start with:
