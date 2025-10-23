@@ -75,8 +75,22 @@ jobs:
   e2e-test:
     name: E2E Tests
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:latest
+        env:
+          POSTGRES_USER: root
+          POSTGRES_PASSWORD: mysecretpassword
+          POSTGRES_DB: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     env:
-      DATABASE_URL: 'postgres://placeholder:placeholder@localhost:5432/placeholder'
+      DATABASE_URL: 'postgres://root:mysecretpassword@localhost:5432/test'
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4

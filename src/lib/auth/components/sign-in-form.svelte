@@ -10,7 +10,7 @@
 <Field.Set>
 	<Field.Legend>Sign In</Field.Legend>
 	<Field.Description>Welcome back! Sign in to your Daily Vibecheck account</Field.Description>
-	<form {...signIn}>
+	<form {...signIn} novalidate>
 		<Field.Group>
 			<Field.Field orientation="responsive">
 				<Field.Content>
@@ -20,7 +20,7 @@
 						<Field.Error>{issue.message}</Field.Error>
 					{/each}
 				</Field.Content>
-				<Input {...signIn.fields.email.as('email')} placeholder="you@example.com" />
+				<Input {...signIn.fields.email.as('email')} id="email" placeholder="you@example.com" />
 			</Field.Field>
 			<Field.Field orientation="responsive">
 				<Field.Content>
@@ -30,14 +30,18 @@
 						<Field.Error>{issue.message}</Field.Error>
 					{/each}
 				</Field.Content>
-				<Input {...signIn.fields.password.as('password')} placeholder="••••••••" />
+				<Input {...signIn.fields.password.as('password')} id="password" placeholder="••••••••" />
 			</Field.Field>
 			<Field.Separator />
 			<Field.Group>
 				<Field.Field orientation="horizontal">
-					<Checkbox {...signIn.fields.rememberMe.as('checkbox')} type={undefined} />
+					<Checkbox
+						{...signIn.fields.rememberMe.as('checkbox')}
+						id="remember-me"
+						type={undefined}
+					/>
 
-					<Field.Label for="rememberMe">Remember me on this device</Field.Label>
+					<Field.Label for="remember-me">Remember me on this device</Field.Label>
 				</Field.Field>
 			</Field.Group>
 

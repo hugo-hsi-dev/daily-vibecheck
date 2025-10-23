@@ -9,7 +9,7 @@
 <Field.Set>
 	<Field.Legend>Create your account</Field.Legend>
 	<Field.Description>Start tracking your personality with Daily Vibecheck</Field.Description>
-	<form {...signUp}>
+	<form {...signUp} novalidate>
 		<Field.Group>
 			<Field.Field orientation="responsive">
 				<Field.Content>
@@ -19,7 +19,7 @@
 						<Field.Error>{issue.message}</Field.Error>
 					{/each}
 				</Field.Content>
-				<Input {...signUp.fields.name.as('text')} placeholder="John Doe" />
+				<Input {...signUp.fields.name.as('text')} id="name" placeholder="John Doe" />
 			</Field.Field>
 
 			<Field.Field orientation="responsive">
@@ -30,7 +30,7 @@
 						<Field.Error>{issue.message}</Field.Error>
 					{/each}
 				</Field.Content>
-				<Input {...signUp.fields.email.as('email')} placeholder="you@example.com" />
+				<Input {...signUp.fields.email.as('email')} id="email" placeholder="you@example.com" />
 			</Field.Field>
 
 			<Field.Field orientation="responsive">
@@ -41,18 +41,22 @@
 						<Field.Error>{issue.message}</Field.Error>
 					{/each}
 				</Field.Content>
-				<Input {...signUp.fields.password.as('password')} placeholder="••••••••" />
+				<Input {...signUp.fields.password.as('password')} id="password" placeholder="••••••••" />
 			</Field.Field>
 
 			<Field.Field orientation="responsive">
 				<Field.Content>
-					<Field.Label for="confirmPassword">Confirm Password</Field.Label>
+					<Field.Label for="confirm-password">Confirm Password</Field.Label>
 					<Field.Description>Re-enter your password to confirm</Field.Description>
 					{#each signUp.fields.confirmPassword.issues() as issue (issue)}
 						<Field.Error>{issue.message}</Field.Error>
 					{/each}
 				</Field.Content>
-				<Input {...signUp.fields.confirmPassword.as('password')} placeholder="••••••••" />
+				<Input
+					{...signUp.fields.confirmPassword.as('password')}
+					id="confirm-password"
+					placeholder="••••••••"
+				/>
 			</Field.Field>
 
 			<Field.Separator />
