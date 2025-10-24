@@ -36,7 +36,7 @@ Daily Vibecheck is a SvelteKit application using TypeScript, Tailwind CSS v4, an
 
 ### Running the Application
 
-- `npm run dev` - Start development server with Vite
+- `npm run dev` - Start development server with Vite, PostgreSQL database, and Vitest in watch mode
 - `npm run build` - Build for production
 - `npm run preview` - Preview production build (runs on port 4173)
 
@@ -49,17 +49,14 @@ Daily Vibecheck is a SvelteKit application using TypeScript, Tailwind CSS v4, an
 
 ### Testing
 
-- `npm run test:unit` - Run Vitest unit tests interactively
-- `npm run test:unit -- --run` - Run unit tests once (CI mode)
-- `npm run test:e2e` - Run Playwright end-to-end tests
-- `npm test` - Run both unit and e2e tests
+- `npm test` - Run all tests once (CI mode)
 
 **Test Organization:**
 
 - Client-side Svelte component tests: `src/**/*.svelte.{test,spec}.{js,ts}` (run in browser with Playwright)
 - Server-side tests: `src/**/*.{test,spec}.{js,ts}` (exclude `.svelte.{test,spec}` files, run in Node)
-- E2E tests: `e2e/*.test.ts` (Playwright tests that build and preview the app first)
 - Vitest is configured with `expect.requireAssertions: true` - all tests must include at least one assertion
+- Tests run automatically in watch mode during `npm run dev`
 
 ### Database Commands
 
@@ -207,15 +204,15 @@ export async function calculateUserType(userId: string) {
 
 Routes (`src/routes/`) are where features come together. Routes import components and remote functions from features and compose them.
 
-**Example: Auth signin route**
+**Example: Auth sign-in route**
 
 ```svelte
-<!-- src/routes/auth/signin/+page.svelte -->
+<!-- src/routes/auth/sign-in/+page.svelte -->
 <script lang="ts">
 	import SignInForm from '$lib/auth/components/sign-in-form.svelte';
 </script>
 
-<div class="signin-page">
+<div class="sign-in-page">
 	<SignInForm />
 </div>
 ```
@@ -502,11 +499,14 @@ Use `command()` for data mutations that aren't tied to forms (e.g., button click
 ```typescript
 // src/routes/posts/actions.remote.ts
 import { command } from '$app/server';
-import * as v from 'valibot';
-import * as db from '$lib/server/database';
+import { z } from 'zod';
+import { db } from '$lib/server/db';
 
-export const addLike = command(v.string(), async (post_id) => {
-	await db.sql`UPDATE post SET likes = likes + 1 WHERE id = ${post_id}`;
+export const addLike = command(z.string(), async (post_id) => {
+	await db
+		.update(posts)
+		.set({ likes: sql`likes + 1` })
+		.where(eq(posts.id, post_id));
 	return { success: true };
 });
 ```
@@ -536,7 +536,7 @@ export const addLike = command(v.string(), async (post_id) => {
 1. **Type safety** - Full TypeScript inference from server to client
 2. **Flexible** - Call from anywhere, not just load functions or forms
 3. **DX** - No need for separate API routes or manual fetch calls
-4. **Validation** - Built-in schema validation with Valibot/Zod
+4. **Validation** - Built-in schema validation with Zod
 5. **Progressive enhancement** - Forms work without JavaScript
 
 **❌ NEVER use these outdated patterns:**
@@ -578,7 +578,7 @@ const client = createAuthClient(); // Uses stores - avoid!
 **✅ CORRECT: Use remote functions with server-side auth**
 
 ```typescript
-// src/lib/auth/session.remote.ts
+// src/lib/auth/remotes/queries.remote.ts
 import { query } from '$app/server';
 import { auth } from '$lib/auth';
 
@@ -592,7 +592,7 @@ export const getSession = query(async (event) => {
 
 ```svelte
 <script lang="ts">
-	import { getSession } from '$lib/auth/session.remote';
+	import { getSession } from '$lib/auth/remotes/queries';
 	const session = getSession();
 </script>
 
@@ -601,7 +601,7 @@ export const getSession = query(async (event) => {
 {:else if session.current?.user}
 	<p>Welcome, {session.current.user.email}!</p>
 {:else}
-	<a href="/signin">Sign in</a>
+	<a href="/auth/sign-in">Sign in</a>
 {/if}
 ```
 
@@ -825,7 +825,7 @@ it.skip('should render sign-in form', () => {
 ```typescript
 // e2e/auth.spec.ts
 test('user can sign in', async ({ page }) => {
-	await page.goto('/auth/signin');
+	await page.goto('/auth/sign-in');
 
 	await page.getByLabel('Email').fill('test@example.com');
 	await page.getByLabel('Password').fill('password123');
@@ -1051,59 +1051,6 @@ await expect.element(page.getByTestId('status-icon')).toHaveClass('text-success'
 - ✅ Test user value, not implementation details (no SVG paths!)
 - ✅ Share validation logic between client and server
 - ✅ Use real `FormData`/`Request` objects in server tests
-
-## E2E Testing (Playwright)
-
-### Purpose
-
-E2E tests complete the **Client-Server Alignment Strategy** by testing the full user journey from browser to server and back. They validate:
-
-- Complete form submission flows
-- Client-server integration
-- Real network requests
-- Full user workflows
-
-### Basic E2E Pattern
-
-```typescript
-// e2e/registration.spec.ts
-import { test, expect } from '@playwright/test';
-
-test('user registration flow', async ({ page }) => {
-	await page.goto('/register');
-
-	await page.getByLabel('Email').fill('[email protected]');
-	await page.getByLabel('Password').fill('secure123');
-	await page.getByRole('button', { name: 'Register' }).click();
-
-	// Tests the complete client-server integration
-	await expect(page.getByText('Welcome!')).toBeVisible();
-});
-```
-
-### When to Write E2E Tests
-
-E2E tests are the **final safety net** but are slower and more expensive to run. Use them for:
-
-- Critical user journeys (signup, login, core workflows)
-- Complete form submissions with server validation
-- Multi-step processes (onboarding, checkout, etc.)
-- Integration between multiple pages/features
-
-**Don't** use E2E tests for:
-
-- UI component behavior (use component tests instead)
-- Input validation (test in components)
-- Individual button clicks (use component tests)
-
-### E2E vs Component Tests
-
-| Test Type       | Use For                                | Speed | Cost |
-| --------------- | -------------------------------------- | ----- | ---- |
-| Component Tests | UI behavior, validation, interactions  | Fast  | Low  |
-| E2E Tests       | Full workflows, client-server contract | Slow  | High |
-
-**Strategy**: Write many component tests, few critical E2E tests.
 
 ## Notes for Future Sessions
 
