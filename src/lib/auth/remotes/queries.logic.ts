@@ -1,5 +1,6 @@
-import type { RemoteQueryFunction, RequestEvent } from '@sveltejs/kit';
+import type { RequestEvent } from '@sveltejs/kit';
 import { error } from '@sveltejs/kit';
+import type { getUser } from './index.remote';
 
 /**
  * Pure business logic for auth queries.
@@ -15,19 +16,7 @@ export function getUserLogic({ event }: GetUserDeps) {
 }
 
 type ValidateUserDeps = {
-	getUser: RemoteQueryFunction<
-		void,
-		| {
-				id: string;
-				createdAt: Date;
-				updatedAt: Date;
-				email: string;
-				emailVerified: boolean;
-				name: string;
-				image?: string | null | undefined;
-		  }
-		| undefined
-	>;
+	getUser: typeof getUser;
 };
 
 export async function validateUserLogic({ getUser }: ValidateUserDeps) {

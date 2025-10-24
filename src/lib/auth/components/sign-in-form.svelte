@@ -4,8 +4,8 @@
 	import * as Field from '$lib/components/ui/field';
 	import { Checkbox } from '$lib/components/ui/checkbox';
 
-	import { signIn } from '../remotes/mutations.remote';
 	import { resolve } from '$app/paths';
+	import { signIn } from '../remotes/index.remote';
 </script>
 
 <form {...signIn} novalidate>

@@ -3,8 +3,8 @@
 	import { Input } from '$lib/components/ui/input';
 	import * as Field from '$lib/components/ui/field';
 
-	import { signUp } from '../remotes/mutations.remote';
 	import { resolve } from '$app/paths';
+	import { signUp } from '../remotes/index.remote';
 </script>
 
 <form {...signUp} novalidate>

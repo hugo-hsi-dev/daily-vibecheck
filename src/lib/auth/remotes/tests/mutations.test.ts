@@ -1,26 +1,17 @@
 import { describe, expect, it, vi } from 'vitest';
-import { signUpLogic, signInLogic } from './mutations.logic';
-import type { MockAuth, MockDb, MockInvalid } from './test-helpers';
+import { signUpLogic, signInLogic } from '../mutations.logic';
+import { createMockAuth, createMockDb } from '$lib/test-mocks';
+import type { db } from '$lib/server/db';
+import type { auth } from '$lib/auth';
 
 describe('Auth Mutations Logic', () => {
 	describe('signUpLogic', () => {
 		it('should create a new user when email does not exist', async () => {
 			expect.assertions(2);
 
-			const mockDb: MockDb = {
-				select: vi.fn().mockReturnValue({
-					from: vi.fn().mockReturnValue({
-						where: vi.fn().mockResolvedValue([]) // No existing user
-					})
-				})
-			};
-
-			const mockAuth: MockAuth = {
-				api: {
-					signUpEmail: vi.fn().mockResolvedValue({ success: true }),
-					signInEmail: vi.fn()
-				}
-			};
+			const mockAuth = createMockAuth();
+			const mockDb = createMockDb();
+			mockDb.select().from().where.mockResolvedValue([]);
 
 			const mockData = {
 				name: 'Test User',
@@ -29,14 +20,15 @@ describe('Auth Mutations Logic', () => {
 				confirmPassword: 'password123'
 			};
 
-			const mockInvalid = vi.fn() as MockInvalid;
-			mockInvalid.email = vi.fn();
+			const mockInvalid = Object.assign(vi.fn(), {
+				email: vi.fn()
+			});
 
 			await signUpLogic({
-				db: mockDb,
-				auth: mockAuth,
+				db: mockDb as unknown as typeof db,
+				auth: mockAuth as unknown as typeof auth,
 				data: mockData,
-				invalid: mockInvalid
+				invalid: mockInvalid as unknown as Parameters<typeof signUpLogic>[0]['invalid']
 			});
 
 			expect(mockAuth.api.signUpEmail).toHaveBeenCalledWith({
@@ -52,21 +44,19 @@ describe('Auth Mutations Logic', () => {
 		it('should call invalid.email when user already exists', async () => {
 			expect.assertions(2);
 
-			const existingUser = { id: '123', email: 'test@example.com' };
-			const mockDb: MockDb = {
-				select: vi.fn().mockReturnValue({
-					from: vi.fn().mockReturnValue({
-						where: vi.fn().mockResolvedValue([existingUser]) // User exists
-					})
-				})
+			const existingUser = {
+				id: '123',
+				email: 'test@example.com',
+				emailVerified: false,
+				name: 'Existing User',
+				createdAt: new Date(),
+				updatedAt: new Date()
 			};
 
-			const mockAuth: MockAuth = {
-				api: {
-					signUpEmail: vi.fn(),
-					signInEmail: vi.fn()
-				}
-			};
+			const mockDb = createMockDb();
+			mockDb.select().from().where.mockResolvedValue([existingUser]);
+
+			const mockAuth = createMockAuth();
 
 			const mockData = {
 				name: 'Test User',
@@ -75,14 +65,15 @@ describe('Auth Mutations Logic', () => {
 				confirmPassword: 'password123'
 			};
 
-			const mockInvalid = vi.fn() as MockInvalid;
-			mockInvalid.email = vi.fn();
+			const mockInvalid = Object.assign(vi.fn(), {
+				email: vi.fn()
+			});
 
 			await signUpLogic({
-				db: mockDb,
-				auth: mockAuth,
+				db: mockDb as unknown as typeof db,
+				auth: mockAuth as unknown as typeof auth,
 				data: mockData,
-				invalid: mockInvalid
+				invalid: mockInvalid as unknown as Parameters<typeof signUpLogic>[0]['invalid']
 			});
 
 			expect(mockInvalid.email).toHaveBeenCalledWith('An account with this email already exists');
@@ -92,18 +83,10 @@ describe('Auth Mutations Logic', () => {
 		it('should query database with correct email', async () => {
 			expect.assertions(1);
 
-			const mockWhere = vi.fn().mockResolvedValue([]);
-			const mockFrom = vi.fn().mockReturnValue({ where: mockWhere });
-			const mockSelect = vi.fn().mockReturnValue({ from: mockFrom });
+			const mockDb = createMockDb();
+			mockDb.select().from().where.mockResolvedValue([]);
 
-			const mockDb: MockDb = { select: mockSelect };
-
-			const mockAuth: MockAuth = {
-				api: {
-					signUpEmail: vi.fn().mockResolvedValue({ success: true }),
-					signInEmail: vi.fn()
-				}
-			};
+			const mockAuth = createMockAuth();
 
 			const mockData = {
 				name: 'Test User',
@@ -112,17 +95,18 @@ describe('Auth Mutations Logic', () => {
 				confirmPassword: 'password123'
 			};
 
-			const mockInvalid = vi.fn() as MockInvalid;
-			mockInvalid.email = vi.fn();
-
-			await signUpLogic({
-				db: mockDb,
-				auth: mockAuth,
-				data: mockData,
-				invalid: mockInvalid
+			const mockInvalid = Object.assign(vi.fn(), {
+				email: vi.fn()
 			});
 
-			expect(mockWhere).toHaveBeenCalled();
+			await signUpLogic({
+				db: mockDb as unknown as typeof db,
+				auth: mockAuth as unknown as typeof auth,
+				data: mockData,
+				invalid: mockInvalid as unknown as Parameters<typeof signUpLogic>[0]['invalid']
+			});
+
+			expect(mockDb.select().from().where).toHaveBeenCalled();
 		});
 	});
 
@@ -130,12 +114,8 @@ describe('Auth Mutations Logic', () => {
 		it('should call auth.api.signInEmail with correct data', async () => {
 			expect.assertions(1);
 
-			const mockAuth: MockAuth = {
-				api: {
-					signInEmail: vi.fn().mockResolvedValue({ success: true }),
-					signUpEmail: vi.fn()
-				}
-			};
+			const mockAuth = createMockAuth();
+			mockAuth.api.signInEmail.mockResolvedValue({ success: true });
 
 			const mockData = {
 				email: 'test@example.com',
@@ -143,7 +123,7 @@ describe('Auth Mutations Logic', () => {
 				rememberMe: true
 			};
 
-			await signInLogic({ auth: mockAuth, data: mockData });
+			await signInLogic({ auth: mockAuth as unknown as typeof auth, data: mockData });
 
 			expect(mockAuth.api.signInEmail).toHaveBeenCalledWith({
 				body: mockData
@@ -153,12 +133,8 @@ describe('Auth Mutations Logic', () => {
 		it('should handle sign in without rememberMe', async () => {
 			expect.assertions(1);
 
-			const mockAuth: MockAuth = {
-				api: {
-					signInEmail: vi.fn().mockResolvedValue({ success: true }),
-					signUpEmail: vi.fn()
-				}
-			};
+			const mockAuth = createMockAuth();
+			mockAuth.api.signInEmail.mockResolvedValue({ success: true });
 
 			const mockData = {
 				email: 'test@example.com',
@@ -166,7 +142,7 @@ describe('Auth Mutations Logic', () => {
 				rememberMe: false
 			};
 
-			await signInLogic({ auth: mockAuth, data: mockData });
+			await signInLogic({ auth: mockAuth as unknown as typeof auth, data: mockData });
 
 			expect(mockAuth.api.signInEmail).toHaveBeenCalledWith({
 				body: {

@@ -7,6 +7,18 @@ import { db } from '$lib/server/db';
 import { signUpSchema, signInSchema } from '../schemas';
 import { signUpLogic, signInLogic } from './mutations.logic';
 
+import { getRequestEvent, query } from '$app/server';
+import { getUserLogic, validateUserLogic } from './queries.logic';
+
+export const getUser = query(() => {
+	const event = getRequestEvent();
+	return getUserLogic({ event });
+});
+
+export const validateUser = query(async () => {
+	return validateUserLogic({ getUser });
+});
+
 export const signUp = form(signUpSchema, async (data, invalid) => {
 	await signUpLogic({ db, auth, data, invalid });
 	redirect(303, resolve('/'));

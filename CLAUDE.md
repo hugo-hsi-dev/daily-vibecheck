@@ -1058,6 +1058,82 @@ test('should return user from event.locals', () => {
 
 This separation allows comprehensive unit testing while maintaining SvelteKit's remote function benefits.
 
+**Creating Centralized Test Mocks:**
+
+For complex dependencies like Drizzle DB and Better Auth, create centralized mock helper functions in `src/lib/test-mocks.ts`:
+
+```typescript
+// src/lib/test-mocks.ts
+import { vi } from 'vitest';
+import type { db } from './server/db';
+import type { auth } from './auth';
+
+type DeepPartial<T> = {
+	[P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
+};
+
+export function createMockDb() {
+	return {
+		query: {
+			user: { findFirst: vi.fn(), findMany: vi.fn() }
+		},
+		select: vi.fn().mockReturnValue({
+			from: vi.fn().mockReturnValue({
+				where: vi.fn()
+			})
+		})
+	} satisfies DeepPartial<typeof db>;
+}
+
+export function createMockAuth() {
+	return {
+		api: {
+			signUpEmail: Object.assign(vi.fn(), { path: undefined, options: undefined }),
+			signInEmail: Object.assign(vi.fn(), { path: undefined, options: undefined })
+		}
+	} satisfies DeepPartial<typeof auth>;
+}
+```
+
+**Using Mock Helpers in Tests:**
+
+```typescript
+import { createMockAuth, createMockDb } from '$lib/test-mocks';
+
+it('should create user when email does not exist', async () => {
+	const mockDb = createMockDb();
+	const mockAuth = createMockAuth();
+	
+	// Mock database to return no existing user
+	mockDb.select().from().where.mockResolvedValue([]);
+	
+	// Mock auth signup to succeed
+	mockAuth.api.signUpEmail.mockResolvedValue({ success: true });
+
+	await signUpLogic({ db: mockDb, auth: mockAuth, data, invalid });
+
+	expect(mockAuth.api.signUpEmail).toHaveBeenCalledWith({
+		body: { name: 'Test', email: 'test@example.com', password: 'pass123' }
+	});
+});
+```
+
+**Key Techniques:**
+
+- **`satisfies DeepPartial<typeof X>`**: Ensures type compatibility without losing vi.fn() methods
+- **`Object.assign(vi.fn(), { prop: value })`**: Adds properties to vi.fn() for complex API objects
+- **Chained mocks**: `mockDb.select().from().where` returns same mock for fluent API
+- **Type-safe mocking**: Full autocomplete on `.mockResolvedValue()` with correct types
+- **Centralized location**: All mock helpers in one file (`src/lib/test-mocks.ts`)
+
+**Why This Works:**
+
+Better Auth API methods are callable objects with additional properties (like `path` and `options`). Using `Object.assign(vi.fn(), { path: undefined, options: undefined })` creates a mock that:
+1. Is callable (from vi.fn())
+2. Has mock methods like `.mockResolvedValue()`
+3. Satisfies the Better Auth type structure
+4. Maintains full type safety
+
 **Testing Components That Use Remote Functions:**
 
 **Components using query() functions** can be tested by mocking the query:
