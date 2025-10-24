@@ -6,8 +6,8 @@
 
 	let {
 		issues,
-		props
-	}: { issues: RemoteFormIssue[] | undefined; props: ComponentProps<typeof Input> } = $props();
+		inputProps
+	}: { issues: RemoteFormIssue[] | undefined; inputProps: ComponentProps<typeof Input> } = $props();
 </script>
 
 <Field.Field orientation="responsive">
@@ -20,5 +20,5 @@
 			</div>
 		{/each}
 	</Field.Content>
-	<Input {...props} id="password" placeholder="••••••••" />
+	<Input {...inputProps} id="password" placeholder="••••••••" />
 </Field.Field>

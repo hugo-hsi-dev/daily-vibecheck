@@ -21,9 +21,11 @@
 				/>
 				<PasswordField
 					issues={signIn.fields.password.issues()}
-					props={signIn.fields.password.as('password')}
+					inputProps={signIn.fields.password.as('password')}
 				/>
-				<RememberMeField props={{ ...signIn.fields.rememberMe.as('checkbox'), type: undefined }} />
+				<RememberMeField
+					checkboxProps={{ ...signIn.fields.rememberMe.as('checkbox'), type: undefined }}
+				/>
 			</Field.Group>
 		</Field.Set>
 		<Field.Separator />
