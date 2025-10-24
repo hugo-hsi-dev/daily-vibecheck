@@ -5,6 +5,7 @@
 	import { Checkbox } from '$lib/components/ui/checkbox';
 
 	import { signIn } from '../remotes/mutations.remote';
+	import { resolve } from '$app/paths';
 </script>
 
 <form {...signIn} novalidate>
@@ -56,7 +57,7 @@
 			<Button type="submit" disabled={signIn.pending !== 0}>
 				{signIn.pending !== 0 ? 'Signing in...' : 'Sign in'}
 			</Button>
-			<Button variant="link">Don't have an account?</Button>
+			<Button variant="link" href={resolve('/auth/sign-up')}>Don't have an account?</Button>
 		</Field.Field>
 	</Field.Group>
 </form>

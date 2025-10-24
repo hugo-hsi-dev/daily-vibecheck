@@ -4,6 +4,7 @@
 	import * as Field from '$lib/components/ui/field';
 
 	import { signUp } from '../remotes/mutations.remote';
+	import { resolve } from '$app/paths';
 </script>
 
 <form {...signUp} novalidate>
@@ -67,7 +68,7 @@
 			<Button type="submit" disabled={signUp.pending !== 0}>
 				{signUp.pending !== 0 ? 'Creating account...' : 'Create account'}
 			</Button>
-			<Button variant="link">Already have an account?</Button>
+			<Button variant="link" href={resolve('/auth/sign-in')}>Already have an account?</Button>
 		</Field.Field>
 	</Field.Group>
 </form>
