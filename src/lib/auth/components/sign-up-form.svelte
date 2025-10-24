@@ -63,7 +63,7 @@
 			</Field.Group>
 		</Field.Set>
 		<Field.Separator />
-		<Field.Field orientation="horizontal">
+		<Field.Field orientation="responsive">
 			<Button type="submit" disabled={signUp.pending !== 0}>
 				{signUp.pending !== 0 ? 'Creating account...' : 'Create account'}
 			</Button>

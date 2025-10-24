@@ -56,7 +56,7 @@
 			<Button type="submit" disabled={signIn.pending !== 0}>
 				{signIn.pending !== 0 ? 'Signing in...' : 'Sign in'}
 			</Button>
-			<Button variant="outline">Don't have an account?</Button>
+			<Button variant="link">Don't have an account?</Button>
 		</Field.Field>
 	</Field.Group>
 </form>
