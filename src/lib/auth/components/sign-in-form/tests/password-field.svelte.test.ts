@@ -9,13 +9,11 @@ describe('PasswordField Component', () => {
 			expect.hasAssertions();
 
 			render(PasswordField, {
-				props: {
-					issues: undefined,
-					inputProps: {
-						name: 'password',
-						type: 'password',
-						required: true
-					}
+				issues: undefined,
+				inputProps: {
+					name: 'password',
+					type: 'password',
+					required: true
 				}
 			});
 
@@ -27,14 +25,12 @@ describe('PasswordField Component', () => {
 			expect.hasAssertions();
 
 			render(PasswordField, {
-				props: {
-					issues: undefined,
-					inputProps: {
-						name: 'password',
-						type: 'password',
-						required: true,
-						value: ''
-					}
+				issues: undefined,
+				inputProps: {
+					name: 'password',
+					type: 'password',
+					required: true,
+					value: ''
 				}
 			});
 
@@ -51,13 +47,11 @@ describe('PasswordField Component', () => {
 			expect.hasAssertions();
 
 			render(PasswordField, {
-				props: {
-					issues: undefined,
-					inputProps: {
-						name: 'password',
-						type: 'password',
-						required: true
-					}
+				issues: undefined,
+				inputProps: {
+					name: 'password',
+					type: 'password',
+					required: true
 				}
 			});
 
@@ -69,13 +63,11 @@ describe('PasswordField Component', () => {
 			expect.hasAssertions();
 
 			render(PasswordField, {
-				props: {
-					issues: [],
-					inputProps: {
-						name: 'password',
-						type: 'password',
-						required: true
-					}
+				issues: [],
+				inputProps: {
+					name: 'password',
+					type: 'password',
+					required: true
 				}
 			});
 
@@ -87,19 +79,17 @@ describe('PasswordField Component', () => {
 			expect.hasAssertions();
 
 			render(PasswordField, {
-				props: {
-					issues: [
-						{
-							message: 'Password must be at least 8 characters',
-							path: ['password']
-						}
-					],
-					inputProps: {
-						name: 'password',
-						type: 'password',
-						required: true,
-						'aria-invalid': true
+				issues: [
+					{
+						message: 'Password must be at least 8 characters',
+						path: ['password']
 					}
+				],
+				inputProps: {
+					name: 'password',
+					type: 'password',
+					required: true,
+					'aria-invalid': true
 				}
 			});
 
@@ -112,23 +102,21 @@ describe('PasswordField Component', () => {
 			expect.hasAssertions();
 
 			render(PasswordField, {
-				props: {
-					issues: [
-						{
-							message: 'Password is required',
-							path: ['password']
-						},
-						{
-							message: 'Password must be at least 8 characters',
-							path: ['password']
-						}
-					],
-					inputProps: {
-						name: 'password',
-						type: 'password',
-						required: true,
-						'aria-invalid': true
+				issues: [
+					{
+						message: 'Password is required',
+						path: ['password']
+					},
+					{
+						message: 'Password must be at least 8 characters',
+						path: ['password']
 					}
+				],
+				inputProps: {
+					name: 'password',
+					type: 'password',
+					required: true,
+					'aria-invalid': true
 				}
 			});
 
@@ -144,14 +132,12 @@ describe('PasswordField Component', () => {
 			expect.hasAssertions();
 
 			render(PasswordField, {
-				props: {
-					issues: undefined,
-					inputProps: {
-						name: 'password',
-						type: 'password',
-						required: true,
-						value: ''
-					}
+				issues: undefined,
+				inputProps: {
+					name: 'password',
+					type: 'password',
+					required: true,
+					value: ''
 				}
 			});
 
@@ -165,14 +151,12 @@ describe('PasswordField Component', () => {
 			expect.hasAssertions();
 
 			render(PasswordField, {
-				props: {
-					issues: undefined,
-					inputProps: {
-						name: 'password',
-						type: 'password',
-						required: true,
-						value: 'existingpassword'
-					}
+				issues: undefined,
+				inputProps: {
+					name: 'password',
+					type: 'password',
+					required: true,
+					value: 'existingpassword'
 				}
 			});
 
@@ -186,19 +170,17 @@ describe('PasswordField Component', () => {
 			expect.hasAssertions();
 
 			render(PasswordField, {
-				props: {
-					issues: [
-						{
-							message: 'Password is required',
-							path: ['password']
-						}
-					],
-					inputProps: {
-						name: 'password',
-						type: 'password',
-						required: true,
-						'aria-invalid': true
+				issues: [
+					{
+						message: 'Password is required',
+						path: ['password']
 					}
+				],
+				inputProps: {
+					name: 'password',
+					type: 'password',
+					required: true,
+					'aria-invalid': true
 				}
 			});
 
@@ -210,13 +192,11 @@ describe('PasswordField Component', () => {
 			expect.hasAssertions();
 
 			render(PasswordField, {
-				props: {
-					issues: undefined,
-					inputProps: {
-						name: 'password',
-						type: 'password',
-						required: true
-					}
+				issues: undefined,
+				inputProps: {
+					name: 'password',
+					type: 'password',
+					required: true
 				}
 			});
 

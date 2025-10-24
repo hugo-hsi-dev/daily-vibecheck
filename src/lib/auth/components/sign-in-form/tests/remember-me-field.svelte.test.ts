@@ -9,11 +9,9 @@ describe('RememberMeField Component', () => {
 			expect.hasAssertions();
 
 			render(RememberMeField, {
-				props: {
-					checkboxProps: {
-						name: 'rememberMe',
-						value: false
-					}
+				checkboxProps: {
+					name: 'rememberMe',
+					value: false
 				}
 			});
 
@@ -24,11 +22,9 @@ describe('RememberMeField Component', () => {
 			expect.hasAssertions();
 
 			render(RememberMeField, {
-				props: {
-					checkboxProps: {
-						name: 'rememberMe',
-						value: false
-					}
+				checkboxProps: {
+					name: 'rememberMe',
+					value: false
 				}
 			});
 
@@ -41,11 +37,9 @@ describe('RememberMeField Component', () => {
 			expect.hasAssertions();
 
 			render(RememberMeField, {
-				props: {
-					checkboxProps: {
-						name: 'rememberMe',
-						value: false
-					}
+				checkboxProps: {
+					name: 'rememberMe',
+					value: false
 				}
 			});
 
@@ -57,12 +51,10 @@ describe('RememberMeField Component', () => {
 			expect.hasAssertions();
 
 			render(RememberMeField, {
-				props: {
-					checkboxProps: {
-						name: 'rememberMe',
-						value: true,
-						checked: true
-					}
+				checkboxProps: {
+					name: 'rememberMe',
+					value: true,
+					checked: true
 				}
 			});
 
@@ -76,11 +68,9 @@ describe('RememberMeField Component', () => {
 			expect.hasAssertions();
 
 			render(RememberMeField, {
-				props: {
-					checkboxProps: {
-						name: 'rememberMe',
-						value: false
-					}
+				checkboxProps: {
+					name: 'rememberMe',
+					value: false
 				}
 			});
 
@@ -102,11 +92,9 @@ describe('RememberMeField Component', () => {
 			expect.hasAssertions();
 
 			render(RememberMeField, {
-				props: {
-					checkboxProps: {
-						name: 'rememberMe',
-						value: false
-					}
+				checkboxProps: {
+					name: 'rememberMe',
+					value: false
 				}
 			});
 
@@ -127,11 +115,9 @@ describe('RememberMeField Component', () => {
 			expect.hasAssertions();
 
 			render(RememberMeField, {
-				props: {
-					checkboxProps: {
-						name: 'rememberMe',
-						value: false
-					}
+				checkboxProps: {
+					name: 'rememberMe',
+					value: false
 				}
 			});
 
@@ -146,12 +132,10 @@ describe('RememberMeField Component', () => {
 			expect.hasAssertions();
 
 			render(RememberMeField, {
-				props: {
-					checkboxProps: {
-						name: 'rememberMe',
-						value: false,
-						disabled: true
-					}
+				checkboxProps: {
+					name: 'rememberMe',
+					value: false,
+					disabled: true
 				}
 			});
 
@@ -165,11 +149,9 @@ describe('RememberMeField Component', () => {
 			expect.hasAssertions();
 
 			render(RememberMeField, {
-				props: {
-					checkboxProps: {
-						name: 'rememberMe',
-						value: false
-					}
+				checkboxProps: {
+					name: 'rememberMe',
+					value: false
 				}
 			});
 
