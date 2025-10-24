@@ -773,11 +773,13 @@ interface UserData {
 ```
 
 **Why prefer `type`?**
+
 - No declaration merging - safer for local definitions
 - Clearer error messages
 - Works with unions, intersections, and mapped types more naturally
 
 **When to use `interface`:**
+
 - Only when extending third-party library types that use interfaces
 - Example: `interface CustomRequestEvent extends RequestEvent { ... }`
 
@@ -803,7 +805,7 @@ export function getUserLogic({ event }: GetUserDeps) {
 }
 
 type ValidateUserDeps = {
-	getUser: typeof getUser;  // Reference remote function type
+	getUser: typeof getUser; // Reference remote function type
 };
 
 export async function validateUserLogic({ getUser }: ValidateUserDeps) {
@@ -824,9 +826,9 @@ import type { db } from '$lib/server/db';
 import type { auth } from '$lib/auth';
 
 type SignUpDeps = {
-	db: typeof db;                              // Complex client - use typeof
-	auth: typeof auth;                          // Complex client - use typeof
-	data: z.infer<typeof signUpSchema>;        // Infer from schema
+	db: typeof db; // Complex client - use typeof
+	auth: typeof auth; // Complex client - use typeof
+	data: z.infer<typeof signUpSchema>; // Infer from schema
 	invalid: Invalid<z.infer<typeof signUpSchema>>; // SvelteKit helper type
 };
 
@@ -857,6 +859,7 @@ type MyDeps = {
 ```
 
 **Why use `typeof`?**
+
 - Avoids replicating complex generic types
 - Types stay in sync with implementation automatically
 - No need to import internal library types
@@ -869,9 +872,9 @@ import type { RequestEvent, Invalid } from '@sveltejs/kit';
 import type { z } from 'zod';
 
 type Deps = {
-	event: RequestEvent;                    // SvelteKit provides this
-	invalid: Invalid<{ email: string }>;    // SvelteKit provides this
-	data: z.infer<typeof mySchema>;         // Zod provides this
+	event: RequestEvent; // SvelteKit provides this
+	invalid: Invalid<{ email: string }>; // SvelteKit provides this
+	data: z.infer<typeof mySchema>; // Zod provides this
 };
 
 // ❌ WRONG: Manually define what libraries provide
@@ -894,7 +897,7 @@ type GetUserReturn = ReturnType<typeof getUserLogic>;
 
 // Reference remote function types
 type ValidateUserDeps = {
-	getUser: typeof getUser;  // Exact remote function signature
+	getUser: typeof getUser; // Exact remote function signature
 };
 ```
 
@@ -910,6 +913,7 @@ export function getUserLogic(deps: GetUserDeps) { ... }
 ```
 
 **Why not export?**
+
 - Reduces auto-import noise in IDE
 - These types are only used in tests (which use `as any` for mocking)
 - Keeps the public API surface small
@@ -957,7 +961,7 @@ type UserData = {
 
 ```typescript
 type SignUpDeps = {
-	data: z.infer<typeof signUpSchema>;        // ✅ Derives from schema
+	data: z.infer<typeof signUpSchema>; // ✅ Derives from schema
 	invalid: Invalid<z.infer<typeof signUpSchema>>; // ✅ Derives from schema
 };
 
@@ -1144,10 +1148,10 @@ import { createMockAuth, createMockDb } from '$lib/test-mocks';
 it('should create user when email does not exist', async () => {
 	const mockDb = createMockDb();
 	const mockAuth = createMockAuth();
-	
+
 	// Mock database to return no existing user
 	mockDb.select().from().where.mockResolvedValue([]);
-	
+
 	// Mock auth signup to succeed
 	mockAuth.api.signUpEmail.mockResolvedValue({ success: true });
 
@@ -1170,6 +1174,7 @@ it('should create user when email does not exist', async () => {
 **Why This Works:**
 
 Better Auth API methods are callable objects with additional properties (like `path` and `options`). Using `Object.assign(vi.fn(), { path: undefined, options: undefined })` creates a mock that:
+
 1. Is callable (from vi.fn())
 2. Has mock methods like `.mockResolvedValue()`
 3. Satisfies the Better Auth type structure
