@@ -86,6 +86,191 @@ Daily Vibecheck is a SvelteKit application using TypeScript, Tailwind CSS v4, an
 - `src/lib/server/db/` - Database configuration and schema
 - `e2e/` - Playwright end-to-end tests
 
+### Feature-Based Architecture
+
+This project uses **feature-based organization** rather than organizing by file type (e.g., `components/`, `utils/`, `remote-functions/`). Each feature is a self-contained module with strict boundaries that prevent cross-feature dependencies.
+
+**Philosophy:**
+
+- Features are organized by domain (e.g., `auth`, `questions`, `dashboard`)
+- All related files for a feature live together in `src/lib/[feature]/`
+- Features **cannot import from each other** - this enforces isolation
+- Only **routes** (`src/routes/`) can compose multiple features together
+- Keeps the codebase cohesive and makes refactoring easier
+
+#### Standard Feature Structure
+
+Every feature follows this structure:
+
+```
+src/lib/[feature]/
+├── components/          # UI components (always)
+├── remotes/             # Remote functions (always)
+│   ├── queries.remote.ts    # Query functions (read data)
+│   └── mutations.remote.ts  # Form and command functions (write data)
+├── schemas.ts           # Zod validation schemas (always, shared client/server)
+├── utils.ts             # Pure helper functions (optional)
+├── constants.ts         # Feature-specific constants (optional)
+├── types.ts             # Shared TypeScript types (rare - use type inference!)
+└── *.server.ts          # Server-only code (optional, as needed)
+```
+
+**File Type Guidelines:**
+
+- **`components/`** - Svelte UI components used by this feature
+- **`remotes/`** - Remote functions folder (always present)
+  - **`queries.remote.ts`** - Query functions for fetching data (read-only)
+    - Usage: `import { getUser } from '$lib/auth/remotes/queries'`
+  - **`mutations.remote.ts`** - Form and command functions for modifying data
+    - Usage: `import { signup, signin } from '$lib/auth/remotes/mutations'`
+- **`schemas.ts`** - Zod validation schemas (used by remote functions and components)
+  - Shared between client and server (no duplication)
+  - No `.server.ts` suffix because validation rules are identical
+- **`utils.ts`** - Pure utility functions specific to this feature
+  - Examples: `formatMBTIType()`, `calculateTypeFromResponses()`
+- **`constants.ts`** - Static configuration values
+  - Examples: `MBTI_DIMENSIONS`, `QUESTIONS_PER_DAY = 3`
+- **`types.ts`** - Shared TypeScript types/interfaces (rarely needed)
+  - Most types are inferred from schemas, database, or remote functions
+  - Only create if you have types that can't be inferred
+- **`*.server.ts`** - Server-only files (e.g., `auth.server.ts`, `service.server.ts`)
+  - Never bundled for client - safe for secrets, sensitive logic
+  - Examples: better-auth instances, database queries, business logic
+  - Naming: `[feature].server.ts` or `[name].server.ts` (e.g., `queries.server.ts`)
+
+#### Example Features
+
+**Auth feature:**
+
+```
+src/lib/auth/
+├── components/
+│   ├── sign-in-form.svelte
+│   └── sign-up-form.svelte
+├── remotes/
+│   ├── queries.remote.ts      # getUser, validateUser
+│   └── mutations.remote.ts    # signup, signin
+├── auth.server.ts             # Better-auth instance
+└── schemas.ts                 # signInSchema, signUpSchema
+```
+
+**Questions feature:**
+
+```
+src/lib/questions/
+├── components/
+│   ├── question-card.svelte
+│   └── answer-buttons.svelte
+├── remotes/
+│   ├── queries.remote.ts      # getDailyQuestions, getTypeHistory
+│   └── mutations.remote.ts    # submitAnswer, calculateType
+├── service.server.ts          # MBTI calculation algorithm
+├── schemas.ts                 # answerSchema, questionSchema
+└── constants.ts               # MBTI_DIMENSIONS, QUESTIONS_PER_DAY
+```
+
+#### Database Schema Organization
+
+The database layer is **centralized** but with special handling for better-auth:
+
+```
+src/lib/server/db/
+├── index.ts              # DB client (postgres-js + Drizzle)
+├── schema.ts             # Application tables (hand-written)
+│                         # Tables: questions, responses, type_history, etc.
+└── auth-schema.ts        # Better-auth generated tables (auto-generated)
+                          # Tables: users, sessions, accounts, verifications
+```
+
+**Why separate?**
+
+- Better-auth auto-generates and manages its schema - keep it isolated
+- Application schema is hand-written and evolved by the team
+- Prevents accidental edits to auto-generated auth tables
+- Different migration workflows (auth migrations vs app migrations)
+
+**All features import the same DB client:**
+
+```typescript
+// src/lib/questions/service.server.ts
+import { db } from '$lib/server/db';
+import { questions, responses } from '$lib/server/db/schema';
+import { users } from '$lib/server/db/auth-schema';
+
+export async function calculateUserType(userId: string) {
+	const user_responses = await db.select().from(responses).where(eq(responses.userId, userId));
+	// ...
+}
+```
+
+#### Routes as the Composition Layer
+
+Routes (`src/routes/`) are where features come together. Routes import components and remote functions from features and compose them.
+
+**Example: Auth signin route**
+
+```svelte
+<!-- src/routes/auth/signin/+page.svelte -->
+<script lang="ts">
+	import SignInForm from '$lib/auth/components/sign-in-form.svelte';
+</script>
+
+<div class="signin-page">
+	<SignInForm />
+</div>
+```
+
+```svelte
+<!-- src/lib/auth/components/sign-in-form.svelte -->
+<script lang="ts">
+	import { signin } from '$lib/auth/remotes/mutations';
+	import { signInSchema } from '$lib/auth/schemas';
+</script>
+
+<form {...signin}>
+	<!-- Form implementation -->
+</form>
+```
+
+#### Feature Isolation Rules
+
+**✅ ALLOWED:**
+
+```typescript
+// Feature imports from itself
+import { getDailyQuestions } from '$lib/questions/remotes/queries';
+import { submitAnswer } from '$lib/questions/remotes/mutations';
+import QuestionCard from '$lib/questions/components/question-card.svelte';
+
+// Route imports from multiple features
+import SignInForm from '$lib/auth/components/sign-in-form.svelte';
+import { getUser } from '$lib/auth/remotes/queries';
+import { signin } from '$lib/auth/remotes/mutations';
+
+// All features can import DB client
+import { db } from '$lib/server/db';
+```
+
+**❌ NOT ALLOWED:**
+
+```typescript
+// ❌ Feature importing from another feature
+// src/lib/dashboard/index.remote.ts
+import { getDailyQuestions } from '$lib/questions'; // NO!
+
+// ❌ Cross-feature component imports
+// src/lib/auth/components/sign-in-form.svelte
+import QuestionCard from '$lib/questions/components/question-card.svelte'; // NO!
+```
+
+**Solution for cross-feature logic:**
+
+If you need shared logic between features, consider:
+
+1. **Move to a shared feature** - Create `src/lib/shared/` for truly cross-cutting concerns
+2. **Move to server layer** - Put shared logic in `src/lib/server/` for server-only operations
+3. **Compose in routes** - Let routes coordinate between features, not the features themselves
+
 ### Key Configuration Files
 
 - `svelte.config.js` - SvelteKit configuration with Node adapter
@@ -107,9 +292,403 @@ Daily Vibecheck is a SvelteKit application using TypeScript, Tailwind CSS v4, an
 - Uses Svelte 5 with runes (modern reactivity)
 - `+page.svelte` - Page components
 - `+layout.svelte` - Layout components
-- `+page.server.ts` / `+layout.server.ts` - Server-side load functions and actions
-- `+page.ts` / `+layout.ts` - Universal load functions
 - Server-only code must be in `src/lib/server/` or `*.server.ts` files
+
+**IMPORTANT:** This project uses **remote functions** instead of traditional load functions (`+page.server.ts`, `+page.ts`) and form actions. Remote functions provide better type safety, more flexible DX, and can be called from anywhere in your application.
+
+### Remote Functions - Mandatory Usage
+
+**This project exclusively uses SvelteKit remote functions for all server communication.** No load functions or form actions should be used.
+
+Remote functions are type-safe server functions exported from `.remote.ts` files that can be called from anywhere in your application. They execute on the server while being callable like regular functions from components.
+
+**Enable in `svelte.config.js`:**
+
+```javascript
+const config = {
+	kit: {
+		experimental: {
+			remoteFunctions: true
+		}
+	},
+	compilerOptions: {
+		experimental: {
+			async: true
+		}
+	}
+};
+```
+
+#### Query Functions (Read Data)
+
+Use `query()` for fetching dynamic data from the server. Queries return Promise-like objects with `loading`, `error`, and `current` properties.
+
+**✅ CORRECT: Query function in `.remote.ts` file**
+
+```typescript
+// src/routes/blog/data.remote.ts
+import { query } from '$app/server';
+import * as db from '$lib/server/database';
+
+export const getPosts = query(async () => {
+	const posts = await db.sql`
+		SELECT title, slug FROM post ORDER BY published_at DESC
+	`;
+	return posts;
+});
+```
+
+**Component usage with await:**
+
+```svelte
+<script lang="ts">
+	import { getPosts } from './data.remote';
+</script>
+
+<ul>
+	{#each await getPosts() as { title, slug }}
+		<li><a href="/blog/{slug}">{title}</a></li>
+	{/each}
+</ul>
+```
+
+**Alternative with loading states:**
+
+```svelte
+<script lang="ts">
+	import { getPosts } from './data.remote';
+	const posts_query = getPosts();
+</script>
+
+{#if posts_query.error}
+	<p>Error loading posts</p>
+{:else if posts_query.loading}
+	<p>Loading...</p>
+{:else}
+	<ul>
+		{#each posts_query.current as post}
+			<li>{post.title}</li>
+		{/each}
+	</ul>
+{/if}
+```
+
+**Query with arguments (requires validation):**
+
+```typescript
+import { query } from '$app/server';
+import { z } from 'zod';
+
+export const getPost = query(z.object({ slug: z.string() }), async ({ slug }) => {
+	const post = await db.query.posts.findFirst({
+		where: (table, { eq }) => eq(table.slug, slug)
+	});
+	return post;
+});
+```
+
+**Note:** This project uses **Zod** for schema validation across both client and server code.
+
+**Cross-field validation** (e.g., password confirmation):
+
+```typescript
+import { z } from 'zod';
+
+const signupSchema = z
+	.object({
+		password: z.string().min(8, 'Password must be at least 8 characters'),
+		confirmPassword: z.string().min(1, 'Please confirm your password')
+	})
+	.refine((data) => data.password === data.confirmPassword, {
+		message: 'Passwords do not match',
+		path: ['confirmPassword'] // Attach error to confirmPassword field
+	});
+```
+
+Use `.refine()` with the `path` option to validate that two fields match and attach the error message to a specific field.
+
+#### Form Functions (Submit Data with Forms)
+
+Use `form()` for handling form submissions with validation and progressive enhancement.
+
+**✅ CORRECT: Form function with validation and error handling**
+
+```typescript
+// src/lib/auth/index.remote.ts
+import { form } from '$app/server';
+import { z } from 'zod';
+import { APIError } from 'better-auth/api';
+import { auth } from '$lib/auth';
+import { signupSchema } from './schemas';
+
+export const signup = form(signupSchema, async (data, { invalid }) => {
+	try {
+		await auth.api.signUpEmail({
+			body: {
+				name: data.name,
+				email: data.email,
+				password: data.password
+			}
+		});
+
+		return { success: true };
+	} catch (error) {
+		// Handle better-auth APIError
+		if (error instanceof APIError) {
+			if (error.message.includes('already exists')) {
+				invalid.email('An account with this email already exists');
+			} else {
+				invalid(error.message || 'Sign up failed');
+			}
+		} else {
+			invalid('An unexpected error occurred. Please try again.');
+		}
+	}
+});
+```
+
+**Error Handling with `invalid()`:**
+
+The `invalid()` function is used to handle validation failures:
+
+- `invalid.fieldName(message)` - Field-specific errors (type-safe)
+- `invalid(message)` - Form-level errors (accessible via `fields.allIssues()`)
+- Automatically sets `aria-invalid` attributes on form fields
+- Prevents form submission when called
+
+**Component usage (spreads onto form element):**
+
+```svelte
+<!-- src/lib/auth/components/sign-up-form.svelte -->
+<script lang="ts">
+	import { signup } from '../index.remote';
+</script>
+
+<form {...signup}>
+	<!-- Form-level errors -->
+	{#each signup.fields.allIssues() as issue (issue)}
+		<p class="error">{issue.message}</p>
+	{/each}
+
+	<input type="email" name="email" required />
+	{#each signup.fields.email.issues() as issue (issue)}
+		<p class="error">{issue.message}</p>
+	{/each}
+
+	<input type="password" name="password" required />
+	{#each signup.fields.password.issues() as issue (issue)}
+		<p class="error">{issue.message}</p>
+	{/each}
+
+	<button type="submit" disabled={signup.pending !== 0}>
+		{signup.pending !== 0 ? 'Signing up...' : 'Sign up'}
+	</button>
+</form>
+```
+
+**Key points:**
+
+- Import and spread the remote function directly: `{...signup}`
+- Use `pending !== 0` to check if form is submitting
+- Add `(issue)` keys to `{#each}` blocks for proper reactivity
+- No need to call the function or manage state manually
+
+#### Command Functions (Imperative Actions)
+
+Use `command()` for data mutations that aren't tied to forms (e.g., button clicks, programmatic actions).
+
+**✅ CORRECT: Command function**
+
+```typescript
+// src/routes/posts/actions.remote.ts
+import { command } from '$app/server';
+import * as v from 'valibot';
+import * as db from '$lib/server/database';
+
+export const addLike = command(v.string(), async (post_id) => {
+	await db.sql`UPDATE post SET likes = likes + 1 WHERE id = ${post_id}`;
+	return { success: true };
+});
+```
+
+**Component usage (call from event handlers):**
+
+```svelte
+<script lang="ts">
+	import { addLike } from './actions.remote';
+
+	interface Props {
+		post_id: string;
+	}
+
+	let { post_id }: Props = $props();
+
+	async function handle_like() {
+		await addLike(post_id);
+	}
+</script>
+
+<button onclick={handle_like}>Like</button>
+```
+
+#### Why Remote Functions?
+
+1. **Type safety** - Full TypeScript inference from server to client
+2. **Flexible** - Call from anywhere, not just load functions or forms
+3. **DX** - No need for separate API routes or manual fetch calls
+4. **Validation** - Built-in schema validation with Valibot/Zod
+5. **Progressive enhancement** - Forms work without JavaScript
+
+**❌ NEVER use these outdated patterns:**
+
+```typescript
+// ❌ DON'T: Load functions in +page.server.ts
+export const load = async () => { ... };
+
+// ❌ DON'T: Form actions in +page.server.ts
+export const actions = {
+	default: async ({ request }) => { ... }
+};
+
+// ❌ DON'T: Manual API routes for simple data fetching
+// src/routes/api/posts/+server.ts
+export async function GET() { ... }
+```
+
+**✅ INSTEAD: Use remote functions**
+
+```typescript
+// ✅ DO: Remote functions in .remote.ts files
+export const getPosts = query(async () => { ... });
+export const createPost = form(schema, async (data) => { ... });
+export const deletePost = command(schema, async (id) => { ... });
+```
+
+### Better-Auth Integration
+
+**Do NOT use `@better-auth/svelte` client** - it uses legacy Svelte stores that will be deprecated. Instead, use remote functions to interact with the `auth` object from `src/lib/auth.ts`.
+
+**❌ WRONG: Using better-auth Svelte client**
+
+```typescript
+import { createAuthClient } from '@better-auth/svelte';
+const client = createAuthClient(); // Uses stores - avoid!
+```
+
+**✅ CORRECT: Use remote functions with server-side auth**
+
+```typescript
+// src/lib/auth/session.remote.ts
+import { query } from '$app/server';
+import { auth } from '$lib/auth';
+
+export const getSession = query(async (event) => {
+	const session = await auth.api.getSession({ headers: event.request.headers });
+	return session;
+});
+```
+
+**Component usage:**
+
+```svelte
+<script lang="ts">
+	import { getSession } from '$lib/auth/session.remote';
+	const session = getSession();
+</script>
+
+{#if session.loading}
+	<p>Loading...</p>
+{:else if session.current?.user}
+	<p>Welcome, {session.current.user.email}!</p>
+{:else}
+	<a href="/signin">Sign in</a>
+{/if}
+```
+
+### Svelte 5 Runes - Mandatory Usage
+
+**This project exclusively uses Svelte 5 runes for all reactive state.** No legacy Svelte code (pre-runes) should be written.
+
+**✅ CORRECT: Always use runes for reactive state**
+
+```typescript
+<script lang="ts">
+	// Reactive state
+	let count = $state(0);
+	let name = $state('');
+	let items = $state<string[]>([]);
+
+	// Derived state
+	let doubled = $derived(count * 2);
+	let isEmpty = $derived(items.length === 0);
+
+	// Effects
+	$effect(() => {
+		console.log(`Count is now ${count}`);
+	});
+</script>
+```
+
+**❌ WRONG: Never use legacy let declarations for reactive state**
+
+```typescript
+<script lang="ts">
+	// This is old Svelte style - DO NOT USE
+	let count = 0;
+	let name = '';
+	let items = [];
+
+	// This won't work properly in Svelte 5
+	$: doubled = count * 2;
+</script>
+```
+
+**Key Runes:**
+
+- `$state()` - Reactive state (replaces `let` for reactive variables)
+- `$state.raw()` - Non-deep reactive state (for large objects/arrays)
+- `$derived()` - Computed values (replaces `$:` reactive statements)
+- `$effect()` - Side effects (replaces `$:` for side effects)
+- `$props()` - Component props (replaces `export let`)
+- `$bindable()` - Two-way bindable props
+
+**Why runes-only?**
+
+1. **Modern Svelte 5** - Runes are the future of Svelte, legacy syntax is deprecated
+2. **Explicit reactivity** - Clear which variables are reactive vs regular
+3. **Better performance** - Fine-grained reactivity tracking
+4. **TypeScript integration** - Better type inference with runes
+5. **Consistency** - Single way to handle reactivity across the entire codebase
+
+### Type-Safe Routing
+
+**Always use `resolve()` for internal navigation** to ensure routes are validated at compile time and properly handle base path configuration.
+
+```typescript
+import { resolve } from '$app/paths';
+import { goto } from '$app/navigation';
+
+// ✅ CORRECT: Use resolve() with goto()
+await goto(resolve('/dashboard'));
+await goto(resolve('/blog/[slug]', { slug: 'hello-world' }));
+
+// ✅ CORRECT: Use resolve() in href attributes
+<a href={resolve('/about')}>About</a>
+<a href={resolve('/posts/[id]', { id: '123' })}>View Post</a>
+
+// ❌ WRONG: Hardcoded paths (fails ESLint svelte/no-navigation-without-resolve)
+await goto('/dashboard');
+<a href="/about">About</a>
+```
+
+**Why use `resolve()`?**
+
+1. **Type safety** - Routes are validated at compile time, preventing broken links during refactoring
+2. **Base path handling** - Automatically prefixes routes with configured base path
+3. **ESLint enforcement** - The `svelte/no-navigation-without-resolve` rule (enabled in recommended config) catches missing `resolve()` calls
+4. **Dynamic routes** - Properly populates route parameters with type checking
+
+**Exceptions:** Absolute URLs (e.g., `https://example.com`), fragment URLs (e.g., `#section`), and empty strings for shallow routing don't require `resolve()`.
 
 ### Environment Variables
 
@@ -170,6 +749,91 @@ Start with **Phase 1** (Database + Auth), as everything else depends on it:
 Once Phase 1 is solid, Phase 2 (questions + algorithm) is critical as it's the core logic of the app.
 
 ## Testing Patterns
+
+### Testing Strategy Overview
+
+**What to Test:**
+
+1. **Component Tests (Unit)** - UI behavior, validation, user interactions
+   - Use Vitest Browser Mode with Playwright
+   - Test user-facing behavior, not implementation details
+   - Mock as little as possible
+
+2. **E2E Tests (Integration)** - Full user flows from browser to database
+   - Use Playwright for complete workflows
+   - Test critical paths: signup, login, core features
+   - No mocking - test against real services
+
+3. **Remote Functions** - **Do NOT unit test** remote functions directly
+   - Remote functions are SvelteKit integration points
+   - Cannot be easily mocked due to SvelteKit's validation
+   - Test via E2E tests instead
+   - If remote function has complex business logic, extract it to a separate `.logic.ts` file and unit test that
+
+**Testing Remote Functions:**
+
+```typescript
+// ❌ DON'T: Try to unit test remote functions
+// src/lib/auth/remotes/queries.test.ts
+import { getUser } from './queries.remote'; // This will fail!
+
+// ✅ DO: Test via E2E
+// e2e/auth.spec.ts
+test('user can view their profile', async ({ page }) => {
+	// Full browser test
+});
+
+// ✅ DO: Extract complex logic and test separately
+// src/lib/questions/calculateType.logic.ts
+export function calculateMBTIType(responses) {
+	// Complex algorithm
+}
+
+// src/lib/questions/calculateType.logic.test.ts
+import { calculateMBTIType } from './calculateType.logic';
+test('calculates INTJ correctly', () => {
+	// Test pure logic
+});
+```
+
+**Testing Components That Use Remote Functions:**
+
+**Components using query() functions** can be tested by mocking the query:
+
+```typescript
+// ✅ DO: Mock query functions
+vi.mock('../remotes/queries.remote', () => ({
+	getUser: vi.fn(() => Promise.resolve({ name: 'Test User', email: 'test@example.com' }))
+}));
+
+render(UserDisplay);
+await expect.element(page.getByText('Test User')).toBeInTheDocument();
+```
+
+**Components using form() functions** are difficult to test in isolation because `form()` returns complex objects with Svelte snippets that must be spread onto `<form>` elements. Mocking these leads to deep Svelte internal errors.
+
+```typescript
+// ❌ DON'T: Try to unit test form components
+// Mocking form() objects is extremely difficult due to snippet complexity
+it.skip('should render sign-in form', () => {
+	// Form components should be tested via E2E instead
+});
+```
+
+**✅ DO: Test form components via E2E tests:**
+
+```typescript
+// e2e/auth.spec.ts
+test('user can sign in', async ({ page }) => {
+	await page.goto('/auth/signin');
+
+	await page.getByLabel('Email').fill('test@example.com');
+	await page.getByLabel('Password').fill('password123');
+	await page.getByRole('button', { name: 'Sign in' }).click();
+
+	await expect(page).toHaveURL('/');
+});
+```
 
 ### Essential Setup for Component Tests
 
