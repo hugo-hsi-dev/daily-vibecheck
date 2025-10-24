@@ -503,7 +503,10 @@ import { z } from 'zod';
 import { db } from '$lib/server/db';
 
 export const addLike = command(z.string(), async (post_id) => {
-	await db.update(posts).set({ likes: sql`likes + 1` }).where(eq(posts.id, post_id));
+	await db
+		.update(posts)
+		.set({ likes: sql`likes + 1` })
+		.where(eq(posts.id, post_id));
 	return { success: true };
 });
 ```
