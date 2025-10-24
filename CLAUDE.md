@@ -707,6 +707,232 @@ await goto('/dashboard');
 
 **Exceptions:** Absolute URLs (e.g., `https://example.com`), fragment URLs (e.g., `#section`), and empty strings for shallow routing don't require `resolve()`.
 
+### TypeScript Patterns and Best Practices
+
+This project prioritizes type safety through inference and smart use of TypeScript utilities. Follow these patterns for maximum type safety with minimal boilerplate.
+
+#### Type vs Interface
+
+**Always use `type` for local type definitions.** Avoid `interface` unless extending third-party types.
+
+```typescript
+// ✅ CORRECT: Use type
+type UserData = {
+	name: string;
+	email: string;
+};
+
+// ❌ WRONG: Interface has unexpected behaviors
+interface UserData {
+	name: string;
+	email: string;
+}
+// If you accidentally declare another interface UserData, they merge!
+// This is a footgun for local types.
+```
+
+**Why prefer `type`?**
+- No declaration merging - safer for local definitions
+- Clearer error messages
+- Works with unions, intersections, and mapped types more naturally
+
+**When to use `interface`:**
+- Only when extending third-party library types that use interfaces
+- Example: `interface CustomRequestEvent extends RequestEvent { ... }`
+
+#### Dependency Injection Types
+
+For `.logic.ts` files, use dependency injection with well-typed dependencies.
+
+**Naming Convention:** `{FunctionName}Deps`
+
+```typescript
+// queries.logic.ts
+import type { RequestEvent } from '@sveltejs/kit';
+import type { db } from '$lib/server/db';
+import type { auth } from '$lib/auth';
+
+// Pattern: Use 'type', not 'interface', keep unexported
+type GetUserDeps = {
+	event: RequestEvent;
+};
+
+export function getUserLogic({ event }: GetUserDeps) {
+	return event.locals.user;
+}
+
+type ValidateUserDeps = {
+	getUser: typeof getUser;  // Reference remote function type
+};
+
+export async function validateUserLogic({ getUser }: ValidateUserDeps) {
+	const user = await getUser();
+	if (!user) throw error(401, 'Unauthorized');
+	return user;
+}
+```
+
+**For mutations with form validation:**
+
+```typescript
+// mutations.logic.ts
+import type { Invalid } from '@sveltejs/kit';
+import type { z } from 'zod';
+import type { signUpSchema } from '../schemas';
+import type { db } from '$lib/server/db';
+import type { auth } from '$lib/auth';
+
+type SignUpDeps = {
+	db: typeof db;                              // Complex client - use typeof
+	auth: typeof auth;                          // Complex client - use typeof
+	data: z.infer<typeof signUpSchema>;        // Infer from schema
+	invalid: Invalid<z.infer<typeof signUpSchema>>; // SvelteKit helper type
+};
+
+export async function signUpLogic({ db, auth, data, invalid }: SignUpDeps) {
+	// Implementation
+}
+```
+
+#### Type Inference Strategies
+
+**Use `typeof` for complex client types:**
+
+```typescript
+// ✅ CORRECT: Extract type from implementation
+import type { db } from '$lib/server/db';
+import type { auth } from '$lib/auth';
+
+type MyDeps = {
+	db: typeof db;     // PostgresJsDatabase<Schema> - complex!
+	auth: typeof auth; // Better-Auth client - complex!
+};
+
+// ❌ WRONG: Manual type replication
+type MyDeps = {
+	db: PostgresJsDatabase<{ users: ..., sessions: ... }>;  // Don't do this!
+	auth: Auth;  // This loses specific configuration types
+};
+```
+
+**Why use `typeof`?**
+- Avoids replicating complex generic types
+- Types stay in sync with implementation automatically
+- No need to import internal library types
+
+**Use helper types from libraries:**
+
+```typescript
+// ✅ CORRECT: Use provided helper types
+import type { RequestEvent, Invalid } from '@sveltejs/kit';
+import type { z } from 'zod';
+
+type Deps = {
+	event: RequestEvent;                    // SvelteKit provides this
+	invalid: Invalid<{ email: string }>;    // SvelteKit provides this
+	data: z.infer<typeof mySchema>;         // Zod provides this
+};
+
+// ❌ WRONG: Manually define what libraries provide
+type Deps = {
+	event: {
+		request: Request;
+		params: Record<string, string>;
+		locals: App.Locals;
+		// ... 20+ more properties
+	};
+};
+```
+
+**Use `Parameters<>` and `ReturnType<>` utilities:**
+
+```typescript
+// Extract types from existing functions
+type GetUserParams = Parameters<typeof getUserLogic>[0];
+type GetUserReturn = ReturnType<typeof getUserLogic>;
+
+// Reference remote function types
+type ValidateUserDeps = {
+	getUser: typeof getUser;  // Exact remote function signature
+};
+```
+
+#### When to Export Types
+
+**Default: Don't export dependency types.**
+
+```typescript
+// queries.logic.ts
+type GetUserDeps = { ... };  // Not exported - internal only
+
+export function getUserLogic(deps: GetUserDeps) { ... }
+```
+
+**Why not export?**
+- Reduces auto-import noise in IDE
+- These types are only used in tests (which use `as any` for mocking)
+- Keeps the public API surface small
+
+**Exception: Export when used across multiple files**
+
+```typescript
+// Only export if genuinely reused
+export type SharedUserData = {
+	id: string;
+	email: string;
+	name: string;
+};
+```
+
+If a type is only used in one file (like dependency injection types), keep it private.
+
+#### Schema-Driven Types
+
+**Always infer from schemas, never duplicate:**
+
+```typescript
+import { z } from 'zod';
+
+// ✅ CORRECT: Schema is single source of truth
+export const userSchema = z.object({
+	name: z.string().min(1),
+	email: z.string().email(),
+	age: z.number().optional(),
+});
+
+type UserData = z.infer<typeof userSchema>;  // Derives from schema
+
+// ❌ WRONG: Duplicates validation rules
+export const userSchema = z.object({ ... });
+
+type UserData = {
+	name: string;
+	email: string;
+	age?: number;
+};  // Now schema and type can drift apart!
+```
+
+**This applies to form validation too:**
+
+```typescript
+type SignUpDeps = {
+	data: z.infer<typeof signUpSchema>;        // ✅ Derives from schema
+	invalid: Invalid<z.infer<typeof signUpSchema>>; // ✅ Derives from schema
+};
+
+// If schema changes, types update automatically
+```
+
+#### Type Safety Checklist
+
+- ✅ Use `type` instead of `interface` for local definitions
+- ✅ Use `typeof` for complex client types (db, auth)
+- ✅ Use library helper types (RequestEvent, Invalid, z.infer)
+- ✅ Keep dependency injection types unexported
+- ✅ Infer from schemas - never duplicate validation rules
+- ✅ Use `Parameters<>` and `ReturnType<>` to extract types
+- ✅ Name dependency types with `{FunctionName}Deps` pattern
+
 ### Environment Variables
 
 - Accessed via `$env/dynamic/private` for server-side runtime variables
