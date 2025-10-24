@@ -1,24 +1,26 @@
 import { describe, expect, it, vi } from 'vitest';
 import { signUpLogic, signInLogic } from './mutations.logic';
+import type { MockAuth, MockDb, MockInvalid } from './test-helpers';
 
 describe('Auth Mutations Logic', () => {
 	describe('signUpLogic', () => {
 		it('should create a new user when email does not exist', async () => {
 			expect.assertions(2);
 
-			const mockDb = {
+			const mockDb: MockDb = {
 				select: vi.fn().mockReturnValue({
 					from: vi.fn().mockReturnValue({
 						where: vi.fn().mockResolvedValue([]) // No existing user
 					})
 				})
-			} as any;
+			};
 
-			const mockAuth = {
+			const mockAuth: MockAuth = {
 				api: {
-					signUpEmail: vi.fn().mockResolvedValue({ success: true })
+					signUpEmail: vi.fn().mockResolvedValue({ success: true }),
+					signInEmail: vi.fn()
 				}
-			} as any;
+			};
 
 			const mockData = {
 				name: 'Test User',
@@ -27,7 +29,7 @@ describe('Auth Mutations Logic', () => {
 				confirmPassword: 'password123'
 			};
 
-			const mockInvalid = vi.fn();
+			const mockInvalid = vi.fn() as MockInvalid;
 			mockInvalid.email = vi.fn();
 
 			await signUpLogic({
@@ -51,19 +53,20 @@ describe('Auth Mutations Logic', () => {
 			expect.assertions(2);
 
 			const existingUser = { id: '123', email: 'test@example.com' };
-			const mockDb = {
+			const mockDb: MockDb = {
 				select: vi.fn().mockReturnValue({
 					from: vi.fn().mockReturnValue({
 						where: vi.fn().mockResolvedValue([existingUser]) // User exists
 					})
 				})
-			} as any;
+			};
 
-			const mockAuth = {
+			const mockAuth: MockAuth = {
 				api: {
-					signUpEmail: vi.fn()
+					signUpEmail: vi.fn(),
+					signInEmail: vi.fn()
 				}
-			} as any;
+			};
 
 			const mockData = {
 				name: 'Test User',
@@ -72,7 +75,7 @@ describe('Auth Mutations Logic', () => {
 				confirmPassword: 'password123'
 			};
 
-			const mockInvalid = vi.fn();
+			const mockInvalid = vi.fn() as MockInvalid;
 			mockInvalid.email = vi.fn();
 
 			await signUpLogic({
@@ -82,9 +85,7 @@ describe('Auth Mutations Logic', () => {
 				invalid: mockInvalid
 			});
 
-			expect(mockInvalid.email).toHaveBeenCalledWith(
-				'An account with this email already exists'
-			);
+			expect(mockInvalid.email).toHaveBeenCalledWith('An account with this email already exists');
 			expect(mockAuth.api.signUpEmail).not.toHaveBeenCalled();
 		});
 
@@ -95,13 +96,14 @@ describe('Auth Mutations Logic', () => {
 			const mockFrom = vi.fn().mockReturnValue({ where: mockWhere });
 			const mockSelect = vi.fn().mockReturnValue({ from: mockFrom });
 
-			const mockDb = { select: mockSelect } as any;
+			const mockDb: MockDb = { select: mockSelect };
 
-			const mockAuth = {
+			const mockAuth: MockAuth = {
 				api: {
-					signUpEmail: vi.fn().mockResolvedValue({ success: true })
+					signUpEmail: vi.fn().mockResolvedValue({ success: true }),
+					signInEmail: vi.fn()
 				}
-			} as any;
+			};
 
 			const mockData = {
 				name: 'Test User',
@@ -110,7 +112,7 @@ describe('Auth Mutations Logic', () => {
 				confirmPassword: 'password123'
 			};
 
-			const mockInvalid = vi.fn();
+			const mockInvalid = vi.fn() as MockInvalid;
 			mockInvalid.email = vi.fn();
 
 			await signUpLogic({
@@ -128,11 +130,12 @@ describe('Auth Mutations Logic', () => {
 		it('should call auth.api.signInEmail with correct data', async () => {
 			expect.assertions(1);
 
-			const mockAuth = {
+			const mockAuth: MockAuth = {
 				api: {
-					signInEmail: vi.fn().mockResolvedValue({ success: true })
+					signInEmail: vi.fn().mockResolvedValue({ success: true }),
+					signUpEmail: vi.fn()
 				}
-			} as any;
+			};
 
 			const mockData = {
 				email: 'test@example.com',
@@ -150,11 +153,12 @@ describe('Auth Mutations Logic', () => {
 		it('should handle sign in without rememberMe', async () => {
 			expect.assertions(1);
 
-			const mockAuth = {
+			const mockAuth: MockAuth = {
 				api: {
-					signInEmail: vi.fn().mockResolvedValue({ success: true })
+					signInEmail: vi.fn().mockResolvedValue({ success: true }),
+					signUpEmail: vi.fn()
 				}
-			} as any;
+			};
 
 			const mockData = {
 				email: 'test@example.com',

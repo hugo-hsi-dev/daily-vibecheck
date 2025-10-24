@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { getUserLogic, validateUserLogic } from './queries.logic';
+import type { MockRequestEvent } from './test-helpers';
 
 describe('Auth Queries Logic', () => {
 	describe('getUserLogic', () => {
@@ -7,9 +8,9 @@ describe('Auth Queries Logic', () => {
 			expect.assertions(1);
 
 			const mockUser = { id: '123', email: 'test@example.com', name: 'Test User' };
-			const mockEvent = {
+			const mockEvent: MockRequestEvent = {
 				locals: { user: mockUser }
-			} as any;
+			};
 
 			const result = getUserLogic({ event: mockEvent });
 
@@ -19,9 +20,9 @@ describe('Auth Queries Logic', () => {
 		it('should return undefined when no user in locals', () => {
 			expect.assertions(1);
 
-			const mockEvent = {
+			const mockEvent: MockRequestEvent = {
 				locals: { user: undefined }
-			} as any;
+			};
 
 			const result = getUserLogic({ event: mockEvent });
 
@@ -50,8 +51,10 @@ describe('Auth Queries Logic', () => {
 
 			try {
 				await validateUserLogic({ getUser: mockGetUser });
-			} catch (error: any) {
-				expect(error.status).toBe(401);
+			} catch (error) {
+				if (error && typeof error === 'object' && 'status' in error) {
+					expect(error.status).toBe(401);
+				}
 			}
 		});
 
@@ -62,8 +65,11 @@ describe('Auth Queries Logic', () => {
 
 			try {
 				await validateUserLogic({ getUser: mockGetUser });
-			} catch (error: any) {
-				expect(error.body.message).toBe('Unauthorized');
+			} catch (error) {
+				if (error && typeof error === 'object' && 'body' in error) {
+					const errorWithBody = error as { body: { message: string } };
+					expect(errorWithBody.body.message).toBe('Unauthorized');
+				}
 			}
 		});
 	});
