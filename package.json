@@ -4,7 +4,7 @@
 	"version": "0.0.1",
 	"type": "module",
 	"scripts": {
-		"dev": "vite dev",
+		"dev": "concurrently 'vite dev' 'pnpm db:start' 'vitest --watch'",
 		"build": "vite build",
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo ''",
@@ -35,6 +35,7 @@
 		"@vitest/browser": "^3.2.4",
 		"bits-ui": "^2.14.0",
 		"clsx": "^2.1.1",
+		"concurrently": "^9.2.1",
 		"drizzle-kit": "^0.31.4",
 		"drizzle-orm": "^0.44.5",
 		"eslint": "^9.36.0",
