@@ -53,8 +53,20 @@ Daily Vibecheck is a SvelteKit application using TypeScript, Tailwind CSS v4, an
 
 **Test Organization:**
 
-- Client-side Svelte component tests: `src/**/*.svelte.{test,spec}.{js,ts}` (run in browser with Playwright)
-- Server-side tests: `src/**/*.{test,spec}.{js,ts}` (exclude `.svelte.{test,spec}` files, run in Node)
+Tests are **co-located with the code they test** in `tests/` subdirectories:
+
+- **Component tests**: `src/lib/[feature]/components/[component-name]/tests/*.svelte.test.ts`
+  - Run in browser with Playwright (Vitest Browser Mode)
+  - Use semantic locators (`page.getByRole()`, `page.getByLabel()`)
+  - Named: `{component-name}.svelte.test.ts`
+- **Remote function logic tests**: `src/lib/[feature]/remotes/tests/*.test.ts`
+  - Run in Node environment
+  - Test `.logic.ts` files, not `.remote.ts` files
+  - Use centralized mocks from `src/lib/test-mocks.ts`
+  - Named: `queries.test.ts`, `mutations.test.ts`
+- **E2E tests**: `e2e/*.spec.ts`
+  - Full user flows from browser to database
+  - No mocking - test against real services
 - Vitest is configured with `expect.requireAssertions: true` - all tests must include at least one assertion
 - Tests run automatically in watch mode during `npm run dev`
 
@@ -102,13 +114,22 @@ Every feature follows this structure:
 ```
 src/lib/[feature]/
 ├── components/          # UI components (always)
+│   ├── component-name/
+│   │   ├── component-name.svelte
+│   │   ├── sub-component-a.svelte
+│   │   ├── sub-component-b.svelte
+│   │   └── tests/
+│   │       ├── component-name.svelte.test.ts
+│   │       ├── sub-component-a.svelte.test.ts
+│   │       └── sub-component-b.svelte.test.ts
+│   └── other-component.svelte
 ├── remotes/             # Remote functions (always)
-│   ├── queries.remote.ts      # Query functions (read data)
+│   ├── index.remote.ts        # Export form(), query() functions
 │   ├── queries.logic.ts       # Pure testable query logic (optional)
-│   ├── queries.logic.test.ts  # Unit tests for query logic (optional)
-│   ├── mutations.remote.ts    # Form and command functions (write data)
 │   ├── mutations.logic.ts     # Pure testable mutation logic (optional)
-│   └── mutations.logic.test.ts # Unit tests for mutation logic (optional)
+│   └── tests/
+│       ├── queries.test.ts    # Unit tests for query logic
+│       └── mutations.test.ts  # Unit tests for mutation logic
 ├── schemas.ts           # Zod validation schemas (always, shared client/server)
 ├── utils.ts             # Pure helper functions (optional)
 ├── constants.ts         # Feature-specific constants (optional)
@@ -119,20 +140,24 @@ src/lib/[feature]/
 **File Type Guidelines:**
 
 - **`components/`** - Svelte UI components used by this feature
+  - **Complex components** are organized in subdirectories with co-located tests
+  - **Test location**: `components/[component-name]/tests/*.svelte.test.ts`
+  - **Test naming**: `{component-name}.svelte.test.ts`
+  - Tests are placed in a `tests/` subdirectory, not next to the component file
 - **`remotes/`** - Remote functions folder (always present)
-  - **`queries.remote.ts`** - Query functions for fetching data (read-only)
-    - Usage: `import { getUser } from '$lib/auth/remotes/queries'`
-    - Thin wrappers around `query()` that call logic functions
+  - **`index.remote.ts`** - Exports all `form()`, `query()`, and `command()` functions
+    - Usage: `import { signup, signin, getUser } from '$lib/auth/remotes/index.remote'`
+    - Thin wrappers around remote function primitives that call logic functions
   - **`queries.logic.ts`** - Pure business logic for queries (optional, for unit testing)
     - Uses dependency injection for testability
     - Example: `getUserLogic({ event })`, `validateUserLogic({ getUser })`
-  - **`queries.logic.test.ts`** - Unit tests for query logic
-  - **`mutations.remote.ts`** - Form and command functions for modifying data
-    - Usage: `import { signup, signin } from '$lib/auth/remotes/mutations'`
-    - Thin wrappers around `form()` and `command()` that call logic functions
   - **`mutations.logic.ts`** - Pure business logic for mutations (optional, for unit testing)
     - Uses dependency injection for testability
-  - **`mutations.logic.test.ts`** - Unit tests for mutation logic
+    - Example: `signUpLogic({ db, auth, data, invalid })`
+  - **`tests/`** - Unit tests for remote function logic
+    - **`queries.test.ts`** - Tests for query logic functions
+    - **`mutations.test.ts`** - Tests for mutation logic functions
+    - Tests use centralized mocks from `src/lib/test-mocks.ts`
 - **`schemas.ts`** - Zod validation schemas (used by remote functions and components)
   - Shared between client and server (no duplication)
   - No `.server.ts` suffix because validation rules are identical
@@ -155,20 +180,32 @@ src/lib/[feature]/
 ```
 src/lib/auth/
 ├── components/
-│   ├── sign-in-form.svelte
+│   ├── sign-in-form/
+│   │   ├── sign-in-form.svelte
+│   │   ├── form-header.svelte
+│   │   ├── form-footer.svelte
+│   │   ├── email-field.svelte
+│   │   ├── password-field.svelte
+│   │   ├── remember-me-field.svelte
+│   │   └── tests/
+│   │       ├── email-field.svelte.test.ts
+│   │       ├── password-field.svelte.test.ts
+│   │       ├── remember-me-field.svelte.test.ts
+│   │       ├── form-footer.svelte.test.ts
+│   │       └── sign-in-form.svelte.test.ts
 │   └── sign-up-form.svelte
 ├── remotes/
-│   ├── queries.remote.ts      # getUser, validateUser (thin wrappers)
+│   ├── index.remote.ts        # Exports signup, signin, getUser, etc.
 │   ├── queries.logic.ts       # getUserLogic, validateUserLogic (testable)
-│   ├── queries.logic.test.ts  # Unit tests for query logic
-│   ├── mutations.remote.ts    # signup, signin (thin wrappers)
-│   ├── mutations.logic.ts     # signupLogic, signinLogic (testable)
-│   └── mutations.logic.test.ts # Unit tests for mutation logic
-├── auth.server.ts             # Better-auth instance
+│   ├── mutations.logic.ts     # signUpLogic, signInLogic (testable)
+│   └── tests/
+│       ├── queries.test.ts    # Unit tests for query logic
+│       └── mutations.test.ts  # Unit tests for mutation logic
+├── auth.server.ts             # Better-auth instance (at src/lib/auth.ts)
 └── schemas.ts                 # signInSchema, signUpSchema
 ```
 
-**Questions feature:**
+**Questions feature (not yet implemented):**
 
 ```
 src/lib/questions/
@@ -176,8 +213,12 @@ src/lib/questions/
 │   ├── question-card.svelte
 │   └── answer-buttons.svelte
 ├── remotes/
-│   ├── queries.remote.ts      # getDailyQuestions, getTypeHistory
-│   └── mutations.remote.ts    # submitAnswer, calculateType
+│   ├── index.remote.ts        # Exports getDailyQuestions, submitAnswer, etc.
+│   ├── queries.logic.ts       # getDailyQuestionsLogic (testable)
+│   ├── mutations.logic.ts     # submitAnswerLogic, calculateTypeLogic (testable)
+│   └── tests/
+│       ├── queries.test.ts    # Unit tests for query logic
+│       └── mutations.test.ts  # Unit tests for mutation logic
 ├── service.server.ts          # MBTI calculation algorithm
 ├── schemas.ts                 # answerSchema, questionSchema
 └── constants.ts               # MBTI_DIMENSIONS, QUESTIONS_PER_DAY
@@ -595,7 +636,7 @@ const client = createAuthClient(); // Uses stores - avoid!
 **✅ CORRECT: Use remote functions with server-side auth**
 
 ```typescript
-// src/lib/auth/remotes/queries.remote.ts
+// src/lib/auth/remotes/index.remote.ts
 import { query } from '$app/server';
 import { auth } from '$lib/auth';
 
@@ -1030,7 +1071,7 @@ export function getUserLogic({ event }: GetUserDeps) {
 	return event.locals.user;
 }
 
-// src/lib/auth/remotes/queries.remote.ts
+// src/lib/auth/remotes/index.remote.ts
 import { getRequestEvent, query } from '$app/server';
 import { getUserLogic } from './queries.logic';
 
@@ -1040,8 +1081,8 @@ export const getUser = query(() => {
 });
 
 // ✅ DO: Unit test the logic layer
-// src/lib/auth/remotes/queries.logic.test.ts
-import { getUserLogic } from './queries.logic';
+// src/lib/auth/remotes/tests/queries.test.ts
+import { getUserLogic } from '../queries.logic';
 
 test('should return user from event.locals', () => {
 	const mockEvent = { locals: { user: { id: '123' } } } as any;
