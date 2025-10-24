@@ -50,15 +50,13 @@
 					<Field.Label for="remember-me">Remember me on this device</Field.Label>
 				</Field.Field>
 			</Field.Group>
-			<Field.Separator />
-			<Field.Group>
-				<Field.Field orientation="responsive">
-					<Button type="submit" disabled={signIn.pending !== 0}>
-						{signIn.pending !== 0 ? 'Signing in...' : 'Sign in'}
-					</Button>
-					<Button variant="outline">Already have an account?</Button>
-				</Field.Field>
-			</Field.Group>
 		</Field.Set>
+		<Field.Separator />
+		<Field.Field orientation="responsive">
+			<Button type="submit" disabled={signIn.pending !== 0}>
+				{signIn.pending !== 0 ? 'Signing in...' : 'Sign in'}
+			</Button>
+			<Button variant="outline">Already have an account?</Button>
+		</Field.Field>
 	</Field.Group>
 </form>

@@ -6,66 +6,68 @@
 	import { signUp } from '../remotes/mutations.remote';
 </script>
 
-<Field.Set>
-	<Field.Legend>Create your account</Field.Legend>
-	<Field.Description>Start tracking your personality with Daily Vibecheck</Field.Description>
-	<form {...signUp} novalidate>
-		<Field.Group>
-			<Field.Field orientation="responsive">
-				<Field.Content>
-					<Field.Label for="name">Full Name</Field.Label>
-					<Field.Description>What should we call you?</Field.Description>
-					{#each signUp.fields.name.issues() as issue (issue)}
-						<Field.Error>{issue.message}</Field.Error>
-					{/each}
-				</Field.Content>
-				<Input {...signUp.fields.name.as('text')} id="name" placeholder="John Doe" />
-			</Field.Field>
-
-			<Field.Field orientation="responsive">
-				<Field.Content>
-					<Field.Label for="email">Email address</Field.Label>
-					<Field.Description>We'll use this for your account</Field.Description>
-					{#each signUp.fields.email.issues() as issue (issue)}
-						<Field.Error>{issue.message}</Field.Error>
-					{/each}
-				</Field.Content>
-				<Input {...signUp.fields.email.as('email')} id="email" placeholder="you@example.com" />
-			</Field.Field>
-
-			<Field.Field orientation="responsive">
-				<Field.Content>
-					<Field.Label for="password">Password</Field.Label>
-					<Field.Description>Must be at least 8 characters</Field.Description>
-					{#each signUp.fields.password.issues() as issue (issue)}
-						<Field.Error>{issue.message}</Field.Error>
-					{/each}
-				</Field.Content>
-				<Input {...signUp.fields.password.as('password')} id="password" placeholder="••••••••" />
-			</Field.Field>
-
-			<Field.Field orientation="responsive">
-				<Field.Content>
-					<Field.Label for="confirm-password">Confirm Password</Field.Label>
-					<Field.Description>Re-enter your password to confirm</Field.Description>
-					{#each signUp.fields.confirmPassword.issues() as issue (issue)}
-						<Field.Error>{issue.message}</Field.Error>
-					{/each}
-				</Field.Content>
-				<Input
-					{...signUp.fields.confirmPassword.as('password')}
-					id="confirm-password"
-					placeholder="••••••••"
-				/>
-			</Field.Field>
-
+<form {...signUp} novalidate>
+	<Field.Group>
+		<Field.Set>
+			<Field.Legend>Create your account</Field.Legend>
+			<Field.Description>Start tracking your personality with Daily Vibecheck</Field.Description>
 			<Field.Separator />
+			<Field.Group>
+				<Field.Field orientation="responsive">
+					<Field.Content>
+						<Field.Label for="name">Full Name</Field.Label>
+						<Field.Description>What should we call you?</Field.Description>
+						{#each signUp.fields.name.issues() as issue (issue)}
+							<Field.Error>{issue.message}</Field.Error>
+						{/each}
+					</Field.Content>
+					<Input {...signUp.fields.name.as('text')} id="name" placeholder="John Doe" />
+				</Field.Field>
 
-			<Field.Field>
-				<Button type="submit" disabled={signUp.pending !== 0} class="w-full">
-					{signUp.pending !== 0 ? 'Creating account...' : 'Sign up'}
-				</Button>
-			</Field.Field>
-		</Field.Group>
-	</form>
-</Field.Set>
+				<Field.Field orientation="responsive">
+					<Field.Content>
+						<Field.Label for="email">Email address</Field.Label>
+						<Field.Description>We'll use this for your account</Field.Description>
+						{#each signUp.fields.email.issues() as issue (issue)}
+							<Field.Error>{issue.message}</Field.Error>
+						{/each}
+					</Field.Content>
+					<Input {...signUp.fields.email.as('email')} id="email" placeholder="you@example.com" />
+				</Field.Field>
+
+				<Field.Field orientation="responsive">
+					<Field.Content>
+						<Field.Label for="password">Password</Field.Label>
+						<Field.Description>Must be at least 8 characters</Field.Description>
+						{#each signUp.fields.password.issues() as issue (issue)}
+							<Field.Error>{issue.message}</Field.Error>
+						{/each}
+					</Field.Content>
+					<Input {...signUp.fields.password.as('password')} id="password" placeholder="••••••••" />
+				</Field.Field>
+
+				<Field.Field orientation="responsive">
+					<Field.Content>
+						<Field.Label for="confirm-password">Confirm Password</Field.Label>
+						<Field.Description>Re-enter your password to confirm</Field.Description>
+						{#each signUp.fields.confirmPassword.issues() as issue (issue)}
+							<Field.Error>{issue.message}</Field.Error>
+						{/each}
+					</Field.Content>
+					<Input
+						{...signUp.fields.confirmPassword.as('password')}
+						id="confirm-password"
+						placeholder="••••••••"
+					/>
+				</Field.Field>
+			</Field.Group>
+		</Field.Set>
+		<Field.Separator />
+		<Field.Field orientation="horizontal">
+			<Button type="submit" disabled={signUp.pending !== 0}>
+				{signUp.pending !== 0 ? 'Creating account...' : 'Sign up'}
+			</Button>
+			<Button variant="link">Already have an account?</Button>
+		</Field.Field>
+	</Field.Group>
+</form>
