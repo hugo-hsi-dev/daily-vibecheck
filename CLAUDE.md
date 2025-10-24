@@ -103,8 +103,12 @@ Every feature follows this structure:
 src/lib/[feature]/
 ├── components/          # UI components (always)
 ├── remotes/             # Remote functions (always)
-│   ├── queries.remote.ts    # Query functions (read data)
-│   └── mutations.remote.ts  # Form and command functions (write data)
+│   ├── queries.remote.ts      # Query functions (read data)
+│   ├── queries.logic.ts       # Pure testable query logic (optional)
+│   ├── queries.logic.test.ts  # Unit tests for query logic (optional)
+│   ├── mutations.remote.ts    # Form and command functions (write data)
+│   ├── mutations.logic.ts     # Pure testable mutation logic (optional)
+│   └── mutations.logic.test.ts # Unit tests for mutation logic (optional)
 ├── schemas.ts           # Zod validation schemas (always, shared client/server)
 ├── utils.ts             # Pure helper functions (optional)
 ├── constants.ts         # Feature-specific constants (optional)
@@ -118,8 +122,17 @@ src/lib/[feature]/
 - **`remotes/`** - Remote functions folder (always present)
   - **`queries.remote.ts`** - Query functions for fetching data (read-only)
     - Usage: `import { getUser } from '$lib/auth/remotes/queries'`
+    - Thin wrappers around `query()` that call logic functions
+  - **`queries.logic.ts`** - Pure business logic for queries (optional, for unit testing)
+    - Uses dependency injection for testability
+    - Example: `getUserLogic({ event })`, `validateUserLogic({ getUser })`
+  - **`queries.logic.test.ts`** - Unit tests for query logic
   - **`mutations.remote.ts`** - Form and command functions for modifying data
     - Usage: `import { signup, signin } from '$lib/auth/remotes/mutations'`
+    - Thin wrappers around `form()` and `command()` that call logic functions
+  - **`mutations.logic.ts`** - Pure business logic for mutations (optional, for unit testing)
+    - Uses dependency injection for testability
+  - **`mutations.logic.test.ts`** - Unit tests for mutation logic
 - **`schemas.ts`** - Zod validation schemas (used by remote functions and components)
   - Shared between client and server (no duplication)
   - No `.server.ts` suffix because validation rules are identical
@@ -145,8 +158,12 @@ src/lib/auth/
 │   ├── sign-in-form.svelte
 │   └── sign-up-form.svelte
 ├── remotes/
-│   ├── queries.remote.ts      # getUser, validateUser
-│   └── mutations.remote.ts    # signup, signin
+│   ├── queries.remote.ts      # getUser, validateUser (thin wrappers)
+│   ├── queries.logic.ts       # getUserLogic, validateUserLogic (testable)
+│   ├── queries.logic.test.ts  # Unit tests for query logic
+│   ├── mutations.remote.ts    # signup, signin (thin wrappers)
+│   ├── mutations.logic.ts     # signupLogic, signinLogic (testable)
+│   └── mutations.logic.test.ts # Unit tests for mutation logic
 ├── auth.server.ts             # Better-auth instance
 └── schemas.ts                 # signInSchema, signUpSchema
 ```
@@ -764,37 +781,56 @@ Once Phase 1 is solid, Phase 2 (questions + algorithm) is critical as it's the c
    - Test critical paths: signup, login, core features
    - No mocking - test against real services
 
-3. **Remote Functions** - **Do NOT unit test** remote functions directly
-   - Remote functions are SvelteKit integration points
-   - Cannot be easily mocked due to SvelteKit's validation
-   - Test via E2E tests instead
-   - If remote function has complex business logic, extract it to a separate `.logic.ts` file and unit test that
+3. **Remote Functions Business Logic** - Extract testable logic from remote functions
+   - Remote functions (`.remote.ts`) are SvelteKit integration points and cannot be unit tested
+   - Extract business logic into `.logic.ts` files using dependency injection
+   - Unit test the `.logic.ts` files with standard mocking
+   - Keep `.remote.ts` as thin wrappers that call logic functions
 
-**Testing Remote Functions:**
+**Testing Remote Functions with Logic Layer:**
 
 ```typescript
-// ❌ DON'T: Try to unit test remote functions
+// ❌ DON'T: Try to unit test remote functions directly
 // src/lib/auth/remotes/queries.test.ts
-import { getUser } from './queries.remote'; // This will fail!
+import { getUser } from './queries.remote'; // This will fail - SvelteKit integration!
 
-// ✅ DO: Test via E2E
-// e2e/auth.spec.ts
-test('user can view their profile', async ({ page }) => {
-	// Full browser test
-});
-
-// ✅ DO: Extract complex logic and test separately
-// src/lib/questions/calculateType.logic.ts
-export function calculateMBTIType(responses) {
-	// Complex algorithm
+// ✅ DO: Extract logic with dependency injection
+// src/lib/auth/remotes/queries.logic.ts
+export interface GetUserDeps {
+	event: RequestEvent;
 }
 
-// src/lib/questions/calculateType.logic.test.ts
-import { calculateMBTIType } from './calculateType.logic';
-test('calculates INTJ correctly', () => {
-	// Test pure logic
+export function getUserLogic({ event }: GetUserDeps) {
+	return event.locals.user;
+}
+
+// src/lib/auth/remotes/queries.remote.ts
+import { getRequestEvent, query } from '$app/server';
+import { getUserLogic } from './queries.logic';
+
+export const getUser = query(() => {
+	const event = getRequestEvent();
+	return getUserLogic({ event }); // Thin wrapper
+});
+
+// ✅ DO: Unit test the logic layer
+// src/lib/auth/remotes/queries.logic.test.ts
+import { getUserLogic } from './queries.logic';
+
+test('should return user from event.locals', () => {
+	const mockEvent = { locals: { user: { id: '123' } } } as any;
+	const result = getUserLogic({ event: mockEvent });
+	expect(result).toEqual({ id: '123' });
 });
 ```
+
+**Why This Pattern Works:**
+
+- **`.remote.ts`** = SvelteKit integration (thin, cannot be tested)
+- **`.logic.ts`** = Pure business logic (testable with dependency injection)
+- **`.logic.test.ts`** = Unit tests with mocked dependencies
+
+This separation allows comprehensive unit testing while maintaining SvelteKit's remote function benefits.
 
 **Testing Components That Use Remote Functions:**
 

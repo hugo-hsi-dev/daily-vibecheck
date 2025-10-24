@@ -1,15 +1,11 @@
 import { getRequestEvent, query } from '$app/server';
-import { error } from '@sveltejs/kit';
+import { getUserLogic, validateUserLogic } from './queries.logic';
 
 export const getUser = query(() => {
 	const event = getRequestEvent();
-	return event.locals.user;
+	return getUserLogic({ event });
 });
 
 export const validateUser = query(async () => {
-	const user = await getUser();
-	if (!user) {
-		throw error(401, 'Unauthorized');
-	}
-	return user;
+	return validateUserLogic({ getUser });
 });
