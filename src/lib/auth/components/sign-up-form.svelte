@@ -10,12 +10,12 @@
 	<Field.Group>
 		<Field.Set>
 			<Field.Legend>Create your account</Field.Legend>
-			<Field.Description>Start tracking your personality with Daily Vibecheck</Field.Description>
+			<Field.Description>Start tracking your personality journey</Field.Description>
 			<Field.Separator />
 			<Field.Group>
 				<Field.Field orientation="responsive">
 					<Field.Content>
-						<Field.Label for="name">Full Name</Field.Label>
+						<Field.Label for="name">Name</Field.Label>
 						<Field.Description>What should we call you?</Field.Description>
 						{#each signUp.fields.name.issues() as issue (issue)}
 							<Field.Error>{issue.message}</Field.Error>
@@ -26,8 +26,8 @@
 
 				<Field.Field orientation="responsive">
 					<Field.Content>
-						<Field.Label for="email">Email address</Field.Label>
-						<Field.Description>We'll use this for your account</Field.Description>
+						<Field.Label for="email">Email</Field.Label>
+						<Field.Description>For account access and notifications</Field.Description>
 						{#each signUp.fields.email.issues() as issue (issue)}
 							<Field.Error>{issue.message}</Field.Error>
 						{/each}
@@ -38,7 +38,7 @@
 				<Field.Field orientation="responsive">
 					<Field.Content>
 						<Field.Label for="password">Password</Field.Label>
-						<Field.Description>Must be at least 8 characters</Field.Description>
+						<Field.Description>At least 8 characters</Field.Description>
 						{#each signUp.fields.password.issues() as issue (issue)}
 							<Field.Error>{issue.message}</Field.Error>
 						{/each}
@@ -48,8 +48,8 @@
 
 				<Field.Field orientation="responsive">
 					<Field.Content>
-						<Field.Label for="confirm-password">Confirm Password</Field.Label>
-						<Field.Description>Re-enter your password to confirm</Field.Description>
+						<Field.Label for="confirm-password">Confirm password</Field.Label>
+						<Field.Description>Enter your password again</Field.Description>
 						{#each signUp.fields.confirmPassword.issues() as issue (issue)}
 							<Field.Error>{issue.message}</Field.Error>
 						{/each}
@@ -65,7 +65,7 @@
 		<Field.Separator />
 		<Field.Field orientation="horizontal">
 			<Button type="submit" disabled={signUp.pending !== 0}>
-				{signUp.pending !== 0 ? 'Creating account...' : 'Sign up'}
+				{signUp.pending !== 0 ? 'Creating account...' : 'Create account'}
 			</Button>
 			<Button variant="link">Already have an account?</Button>
 		</Field.Field>
