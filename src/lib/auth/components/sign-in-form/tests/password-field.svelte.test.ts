@@ -81,8 +81,7 @@ describe('PasswordField Component', () => {
 			render(PasswordField, {
 				issues: [
 					{
-						message: 'Password must be at least 8 characters',
-						path: ['password']
+						message: 'Password must be at least 8 characters'
 					}
 				],
 				inputProps: {
@@ -104,12 +103,10 @@ describe('PasswordField Component', () => {
 			render(PasswordField, {
 				issues: [
 					{
-						message: 'Password is required',
-						path: ['password']
+						message: 'Password is required'
 					},
 					{
-						message: 'Password must be at least 8 characters',
-						path: ['password']
+						message: 'Password must be at least 8 characters'
 					}
 				],
 				inputProps: {
@@ -172,8 +169,7 @@ describe('PasswordField Component', () => {
 			render(PasswordField, {
 				issues: [
 					{
-						message: 'Password is required',
-						path: ['password']
+						message: 'Password is required'
 					}
 				],
 				inputProps: {

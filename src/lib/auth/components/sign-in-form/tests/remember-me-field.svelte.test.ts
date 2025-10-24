@@ -10,8 +10,7 @@ describe('RememberMeField Component', () => {
 
 			render(RememberMeField, {
 				checkboxProps: {
-					name: 'rememberMe',
-					value: false
+					name: 'rememberMe'
 				}
 			});
 
@@ -23,8 +22,7 @@ describe('RememberMeField Component', () => {
 
 			render(RememberMeField, {
 				checkboxProps: {
-					name: 'rememberMe',
-					value: false
+					name: 'rememberMe'
 				}
 			});
 
@@ -38,8 +36,7 @@ describe('RememberMeField Component', () => {
 
 			render(RememberMeField, {
 				checkboxProps: {
-					name: 'rememberMe',
-					value: false
+					name: 'rememberMe'
 				}
 			});
 
@@ -47,13 +44,12 @@ describe('RememberMeField Component', () => {
 			await expect.element(checkbox).not.toBeChecked();
 		});
 
-		it('should render checked when value is true', async () => {
+		it('should render checked when checked is true', async () => {
 			expect.hasAssertions();
 
 			render(RememberMeField, {
 				checkboxProps: {
 					name: 'rememberMe',
-					value: true,
 					checked: true
 				}
 			});
@@ -69,8 +65,7 @@ describe('RememberMeField Component', () => {
 
 			render(RememberMeField, {
 				checkboxProps: {
-					name: 'rememberMe',
-					value: false
+					name: 'rememberMe'
 				}
 			});
 
@@ -93,8 +88,7 @@ describe('RememberMeField Component', () => {
 
 			render(RememberMeField, {
 				checkboxProps: {
-					name: 'rememberMe',
-					value: false
+					name: 'rememberMe'
 				}
 			});
 
@@ -116,8 +110,7 @@ describe('RememberMeField Component', () => {
 
 			render(RememberMeField, {
 				checkboxProps: {
-					name: 'rememberMe',
-					value: false
+					name: 'rememberMe'
 				}
 			});
 
@@ -134,7 +127,6 @@ describe('RememberMeField Component', () => {
 			render(RememberMeField, {
 				checkboxProps: {
 					name: 'rememberMe',
-					value: false,
 					disabled: true
 				}
 			});
@@ -150,8 +142,7 @@ describe('RememberMeField Component', () => {
 
 			render(RememberMeField, {
 				checkboxProps: {
-					name: 'rememberMe',
-					value: false
+					name: 'rememberMe'
 				}
 			});
 
