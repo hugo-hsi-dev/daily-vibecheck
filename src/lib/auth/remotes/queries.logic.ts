@@ -1,4 +1,4 @@
-import type { RequestEvent } from '@sveltejs/kit';
+import type { RemoteQueryFunction, RequestEvent } from '@sveltejs/kit';
 import { error } from '@sveltejs/kit';
 
 /**
@@ -6,17 +6,29 @@ import { error } from '@sveltejs/kit';
  * These functions use dependency injection for testability.
  */
 
-export interface GetUserDeps {
+type GetUserDeps = {
 	event: RequestEvent;
-}
+};
 
 export function getUserLogic({ event }: GetUserDeps) {
 	return event.locals.user;
 }
 
-export interface ValidateUserDeps {
-	getUser: () => Promise<ReturnType<typeof getUserLogic>>;
-}
+type ValidateUserDeps = {
+	getUser: RemoteQueryFunction<
+		void,
+		| {
+				id: string;
+				createdAt: Date;
+				updatedAt: Date;
+				email: string;
+				emailVerified: boolean;
+				name: string;
+				image?: string | null | undefined;
+		  }
+		| undefined
+	>;
+};
 
 export async function validateUserLogic({ getUser }: ValidateUserDeps) {
 	const user = await getUser();

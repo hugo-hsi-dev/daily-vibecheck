@@ -1,26 +1,24 @@
-import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import type { Auth } from 'better-auth';
 import { eq } from 'drizzle-orm';
 import { user } from '$lib/server/db/auth-schema';
 import type { z } from 'zod';
 import type { signInSchema, signUpSchema } from '../schemas';
+import type { db } from '$lib/server/db';
+import type { auth } from '$lib/auth';
+import type { Invalid } from '@sveltejs/kit';
 
 /**
  * Pure business logic for auth mutations.
  * These functions use dependency injection for testability.
  */
 
-export interface SignUpLogicDeps {
-	db: PostgresJsDatabase<any>;
-	auth: Auth;
+type SignUpDeps = {
+	db: typeof db;
+	auth: typeof auth;
 	data: z.infer<typeof signUpSchema>;
-	invalid: {
-		email: (message: string) => void;
-		(message: string): void;
-	};
-}
+	invalid: Invalid<z.infer<typeof signUpSchema>>;
+};
 
-export async function signUpLogic({ db, auth, data, invalid }: SignUpLogicDeps) {
+export async function signUpLogic({ db, auth, data, invalid }: SignUpDeps) {
 	// Check if user already exists
 	const existingUser = await db.select().from(user).where(eq(user.email, data.email));
 
@@ -38,12 +36,12 @@ export async function signUpLogic({ db, auth, data, invalid }: SignUpLogicDeps) 
 	});
 }
 
-export interface SignInLogicDeps {
-	auth: Auth;
+type SignInDeps = {
+	auth: typeof auth;
 	data: z.infer<typeof signInSchema>;
-}
+};
 
-export async function signInLogic({ auth, data }: SignInLogicDeps) {
+export async function signInLogic({ auth, data }: SignInDeps) {
 	await auth.api.signInEmail({
 		body: data
 	});
