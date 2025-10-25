@@ -53,9 +53,17 @@ Daily Vibecheck is a SvelteKit application using TypeScript, Tailwind CSS v4, an
 
 **Test Organization:**
 
-- Client-side Svelte component tests: `src/**/*.svelte.{test,spec}.{js,ts}` (run in browser with Playwright)
-- Server-side tests: `src/**/*.{test,spec}.{js,ts}` (exclude `.svelte.{test,spec}` files, run in Node)
-- Vitest is configured with `expect.requireAssertions: true` - all tests must include at least one assertion
+Tests are **co-located with the code they test** in `tests/` subdirectories:
+
+- **Component tests**: `src/lib/[feature]/components/[component-name]/tests/*.svelte.test.ts`
+  - Run in browser with Playwright (Vitest Browser Mode)
+  - Use semantic locators (`page.getByRole()`, `page.getByLabel()`)
+  - Named: `{component-name}.svelte.test.ts`
+- **Remote function logic tests**: `src/lib/[feature]/remotes/tests/*.test.ts`
+  - Run in Node environment
+  - Test `.logic.ts` files, not `.remote.ts` files
+  - Use centralized mocks from `src/lib/test-mocks.ts`
+  - Named: `queries.test.ts`, `mutations.test.ts`
 - Tests run automatically in watch mode during `npm run dev`
 
 ### Database Commands
@@ -77,11 +85,10 @@ Daily Vibecheck is a SvelteKit application using TypeScript, Tailwind CSS v4, an
 
 ### Directory Structure
 
-- `src/routes/` - SvelteKit file-based routing (pages and API endpoints)
+- `src/routes/` - SvelteKit file-based routing (pages)
 - `src/lib/` - Shared library code (exported via `$lib` alias)
 - `src/lib/server/` - Server-only code (never bundled for client)
 - `src/lib/server/db/` - Database configuration and schema
-- `e2e/` - Playwright end-to-end tests
 
 ### Feature-Based Architecture
 
@@ -102,9 +109,22 @@ Every feature follows this structure:
 ```
 src/lib/[feature]/
 ├── components/          # UI components (always)
+│   ├── component-name/
+│   │   ├── component-name.svelte
+│   │   ├── sub-component-a.svelte
+│   │   ├── sub-component-b.svelte
+│   │   └── tests/
+│   │       ├── component-name.svelte.test.ts
+│   │       ├── sub-component-a.svelte.test.ts
+│   │       └── sub-component-b.svelte.test.ts
+│   └── other-component.svelte
 ├── remotes/             # Remote functions (always)
-│   ├── queries.remote.ts    # Query functions (read data)
-│   └── mutations.remote.ts  # Form and command functions (write data)
+│   ├── index.remote.ts        # Export form(), query() functions
+│   ├── queries.logic.ts       # Pure testable query logic (optional)
+│   ├── mutations.logic.ts     # Pure testable mutation logic (optional)
+│   └── tests/
+│       ├── queries.test.ts    # Unit tests for query logic
+│       └── mutations.test.ts  # Unit tests for mutation logic
 ├── schemas.ts           # Zod validation schemas (always, shared client/server)
 ├── utils.ts             # Pure helper functions (optional)
 ├── constants.ts         # Feature-specific constants (optional)
@@ -115,11 +135,24 @@ src/lib/[feature]/
 **File Type Guidelines:**
 
 - **`components/`** - Svelte UI components used by this feature
+  - **Complex components** are organized in subdirectories with co-located tests
+  - **Test location**: `components/[component-name]/tests/*.svelte.test.ts`
+  - **Test naming**: `{component-name}.svelte.test.ts`
+  - Tests are placed in a `tests/` subdirectory, not next to the component file
 - **`remotes/`** - Remote functions folder (always present)
-  - **`queries.remote.ts`** - Query functions for fetching data (read-only)
-    - Usage: `import { getUser } from '$lib/auth/remotes/queries'`
-  - **`mutations.remote.ts`** - Form and command functions for modifying data
-    - Usage: `import { signup, signin } from '$lib/auth/remotes/mutations'`
+  - **`index.remote.ts`** - Exports all `form()`, `query()`, and `command()` functions
+    - Usage: `import { signup, signin, getUser } from '$lib/auth/remotes/index.remote'`
+    - Thin wrappers around remote function primitives that call logic functions
+  - **`queries.logic.ts`** - Pure business logic for queries (optional, for unit testing)
+    - Uses dependency injection for testability
+    - Example: `getUserLogic({ event })`, `validateUserLogic({ getUser })`
+  - **`mutations.logic.ts`** - Pure business logic for mutations (optional, for unit testing)
+    - Uses dependency injection for testability
+    - Example: `signUpLogic({ db, auth, data, invalid })`
+  - **`tests/`** - Unit tests for remote function logic
+    - **`queries.test.ts`** - Tests for query logic functions
+    - **`mutations.test.ts`** - Tests for mutation logic functions
+    - Tests use centralized mocks from `src/lib/test-mocks.ts`
 - **`schemas.ts`** - Zod validation schemas (used by remote functions and components)
   - Shared between client and server (no duplication)
   - No `.server.ts` suffix because validation rules are identical
@@ -142,16 +175,32 @@ src/lib/[feature]/
 ```
 src/lib/auth/
 ├── components/
-│   ├── sign-in-form.svelte
+│   ├── sign-in-form/
+│   │   ├── sign-in-form.svelte
+│   │   ├── form-header.svelte
+│   │   ├── form-footer.svelte
+│   │   ├── email-field.svelte
+│   │   ├── password-field.svelte
+│   │   ├── remember-me-field.svelte
+│   │   └── tests/
+│   │       ├── email-field.svelte.test.ts
+│   │       ├── password-field.svelte.test.ts
+│   │       ├── remember-me-field.svelte.test.ts
+│   │       ├── form-footer.svelte.test.ts
+│   │       └── sign-in-form.svelte.test.ts
 │   └── sign-up-form.svelte
 ├── remotes/
-│   ├── queries.remote.ts      # getUser, validateUser
-│   └── mutations.remote.ts    # signup, signin
-├── auth.server.ts             # Better-auth instance
+│   ├── index.remote.ts        # Exports signup, signin, getUser, etc.
+│   ├── queries.logic.ts       # getUserLogic, validateUserLogic (testable)
+│   ├── mutations.logic.ts     # signUpLogic, signInLogic (testable)
+│   └── tests/
+│       ├── queries.test.ts    # Unit tests for query logic
+│       └── mutations.test.ts  # Unit tests for mutation logic
+├── auth.server.ts             # Better-auth instance (at src/lib/auth.ts)
 └── schemas.ts                 # signInSchema, signUpSchema
 ```
 
-**Questions feature:**
+**Questions feature (not yet implemented):**
 
 ```
 src/lib/questions/
@@ -159,8 +208,12 @@ src/lib/questions/
 │   ├── question-card.svelte
 │   └── answer-buttons.svelte
 ├── remotes/
-│   ├── queries.remote.ts      # getDailyQuestions, getTypeHistory
-│   └── mutations.remote.ts    # submitAnswer, calculateType
+│   ├── index.remote.ts        # Exports getDailyQuestions, submitAnswer, etc.
+│   ├── queries.logic.ts       # getDailyQuestionsLogic (testable)
+│   ├── mutations.logic.ts     # submitAnswerLogic, calculateTypeLogic (testable)
+│   └── tests/
+│       ├── queries.test.ts    # Unit tests for query logic
+│       └── mutations.test.ts  # Unit tests for mutation logic
 ├── service.server.ts          # MBTI calculation algorithm
 ├── schemas.ts                 # answerSchema, questionSchema
 └── constants.ts               # MBTI_DIMENSIONS, QUESTIONS_PER_DAY
@@ -578,7 +631,7 @@ const client = createAuthClient(); // Uses stores - avoid!
 **✅ CORRECT: Use remote functions with server-side auth**
 
 ```typescript
-// src/lib/auth/remotes/queries.remote.ts
+// src/lib/auth/remotes/index.remote.ts
 import { query } from '$app/server';
 import { auth } from '$lib/auth';
 
@@ -690,6 +743,236 @@ await goto('/dashboard');
 
 **Exceptions:** Absolute URLs (e.g., `https://example.com`), fragment URLs (e.g., `#section`), and empty strings for shallow routing don't require `resolve()`.
 
+### TypeScript Patterns and Best Practices
+
+This project prioritizes type safety through inference and smart use of TypeScript utilities. Follow these patterns for maximum type safety with minimal boilerplate.
+
+#### Type vs Interface
+
+**Always use `type` for local type definitions.** Avoid `interface` unless extending third-party types.
+
+```typescript
+// ✅ CORRECT: Use type
+type UserData = {
+	name: string;
+	email: string;
+};
+
+// ❌ WRONG: Interface has unexpected behaviors
+interface UserData {
+	name: string;
+	email: string;
+}
+// If you accidentally declare another interface UserData, they merge!
+// This is a footgun for local types.
+```
+
+**Why prefer `type`?**
+
+- No declaration merging - safer for local definitions
+- Clearer error messages
+- Works with unions, intersections, and mapped types more naturally
+
+**When to use `interface`:**
+
+- Only when extending third-party library types that use interfaces
+- Example: `interface CustomRequestEvent extends RequestEvent { ... }`
+
+#### Dependency Injection Types
+
+For `.logic.ts` files, use dependency injection with well-typed dependencies.
+
+**Naming Convention:** `{FunctionName}Deps`
+
+```typescript
+// queries.logic.ts
+import type { RequestEvent } from '@sveltejs/kit';
+import type { db } from '$lib/server/db';
+import type { auth } from '$lib/auth';
+
+// Pattern: Use 'type', not 'interface', keep unexported
+type GetUserDeps = {
+	event: RequestEvent;
+};
+
+export function getUserLogic({ event }: GetUserDeps) {
+	return event.locals.user;
+}
+
+type ValidateUserDeps = {
+	getUser: typeof getUser; // Reference remote function type
+};
+
+export async function validateUserLogic({ getUser }: ValidateUserDeps) {
+	const user = await getUser();
+	if (!user) throw error(401, 'Unauthorized');
+	return user;
+}
+```
+
+**For mutations with form validation:**
+
+```typescript
+// mutations.logic.ts
+import type { Invalid } from '@sveltejs/kit';
+import type { z } from 'zod';
+import type { signUpSchema } from '../schemas';
+import type { db } from '$lib/server/db';
+import type { auth } from '$lib/auth';
+
+type SignUpDeps = {
+	db: typeof db; // Complex client - use typeof
+	auth: typeof auth; // Complex client - use typeof
+	data: z.infer<typeof signUpSchema>; // Infer from schema
+	invalid: Invalid<z.infer<typeof signUpSchema>>; // SvelteKit helper type
+};
+
+export async function signUpLogic({ db, auth, data, invalid }: SignUpDeps) {
+	// Implementation
+}
+```
+
+#### Type Inference Strategies
+
+**Use `typeof` for complex client types:**
+
+```typescript
+// ✅ CORRECT: Extract type from implementation
+import type { db } from '$lib/server/db';
+import type { auth } from '$lib/auth';
+
+type MyDeps = {
+	db: typeof db;     // PostgresJsDatabase<Schema> - complex!
+	auth: typeof auth; // Better-Auth client - complex!
+};
+
+// ❌ WRONG: Manual type replication
+type MyDeps = {
+	db: PostgresJsDatabase<{ users: ..., sessions: ... }>;  // Don't do this!
+	auth: Auth;  // This loses specific configuration types
+};
+```
+
+**Why use `typeof`?**
+
+- Avoids replicating complex generic types
+- Types stay in sync with implementation automatically
+- No need to import internal library types
+
+**Use helper types from libraries:**
+
+```typescript
+// ✅ CORRECT: Use provided helper types
+import type { RequestEvent, Invalid } from '@sveltejs/kit';
+import type { z } from 'zod';
+
+type Deps = {
+	event: RequestEvent; // SvelteKit provides this
+	invalid: Invalid<{ email: string }>; // SvelteKit provides this
+	data: z.infer<typeof mySchema>; // Zod provides this
+};
+
+// ❌ WRONG: Manually define what libraries provide
+type Deps = {
+	event: {
+		request: Request;
+		params: Record<string, string>;
+		locals: App.Locals;
+		// ... 20+ more properties
+	};
+};
+```
+
+**Use `Parameters<>` and `ReturnType<>` utilities:**
+
+```typescript
+// Extract types from existing functions
+type GetUserParams = Parameters<typeof getUserLogic>[0];
+type GetUserReturn = ReturnType<typeof getUserLogic>;
+
+// Reference remote function types
+type ValidateUserDeps = {
+	getUser: typeof getUser; // Exact remote function signature
+};
+```
+
+#### When to Export Types
+
+**Default: Don't export dependency types.**
+
+```typescript
+// queries.logic.ts
+type GetUserDeps = { ... };  // Not exported - internal only
+
+export function getUserLogic(deps: GetUserDeps) { ... }
+```
+
+**Why not export?**
+
+- Reduces auto-import noise in IDE
+- These types are only used in tests (which use `as any` for mocking)
+- Keeps the public API surface small
+
+**Exception: Export when used across multiple files**
+
+```typescript
+// Only export if genuinely reused
+export type SharedUserData = {
+	id: string;
+	email: string;
+	name: string;
+};
+```
+
+If a type is only used in one file (like dependency injection types), keep it private.
+
+#### Schema-Driven Types
+
+**Always infer from schemas, never duplicate:**
+
+```typescript
+import { z } from 'zod';
+
+// ✅ CORRECT: Schema is single source of truth
+export const userSchema = z.object({
+	name: z.string().min(1),
+	email: z.string().email(),
+	age: z.number().optional(),
+});
+
+type UserData = z.infer<typeof userSchema>;  // Derives from schema
+
+// ❌ WRONG: Duplicates validation rules
+export const userSchema = z.object({ ... });
+
+type UserData = {
+	name: string;
+	email: string;
+	age?: number;
+};  // Now schema and type can drift apart!
+```
+
+**This applies to form validation too:**
+
+```typescript
+type SignUpDeps = {
+	data: z.infer<typeof signUpSchema>; // ✅ Derives from schema
+	invalid: Invalid<z.infer<typeof signUpSchema>>; // ✅ Derives from schema
+};
+
+// If schema changes, types update automatically
+```
+
+#### Type Safety Checklist
+
+- ✅ Use `type` instead of `interface` for local definitions
+- ✅ Use `typeof` for complex client types (db, auth)
+- ✅ Use library helper types (RequestEvent, Invalid, z.infer)
+- ✅ Keep dependency injection types unexported
+- ✅ Infer from schemas - never duplicate validation rules
+- ✅ Use `Parameters<>` and `ReturnType<>` to extract types
+- ✅ Name dependency types with `{FunctionName}Deps` pattern
+
 ### Environment Variables
 
 - Accessed via `$env/dynamic/private` for server-side runtime variables
@@ -764,37 +1047,314 @@ Once Phase 1 is solid, Phase 2 (questions + algorithm) is critical as it's the c
    - Test critical paths: signup, login, core features
    - No mocking - test against real services
 
-3. **Remote Functions** - **Do NOT unit test** remote functions directly
-   - Remote functions are SvelteKit integration points
-   - Cannot be easily mocked due to SvelteKit's validation
-   - Test via E2E tests instead
-   - If remote function has complex business logic, extract it to a separate `.logic.ts` file and unit test that
+3. **Remote Functions Business Logic** - Extract testable logic from remote functions
+   - Remote functions (`.remote.ts`) are SvelteKit integration points and cannot be unit tested
+   - Extract business logic into `.logic.ts` files using dependency injection
+   - Unit test the `.logic.ts` files with standard mocking
+   - Keep `.remote.ts` as thin wrappers that call logic functions
 
-**Testing Remote Functions:**
+**Testing Remote Functions with Logic Layer:**
 
 ```typescript
-// ❌ DON'T: Try to unit test remote functions
+// ❌ DON'T: Try to unit test remote functions directly
 // src/lib/auth/remotes/queries.test.ts
-import { getUser } from './queries.remote'; // This will fail!
+import { getUser } from './queries.remote'; // This will fail - SvelteKit integration!
 
-// ✅ DO: Test via E2E
-// e2e/auth.spec.ts
-test('user can view their profile', async ({ page }) => {
-	// Full browser test
-});
-
-// ✅ DO: Extract complex logic and test separately
-// src/lib/questions/calculateType.logic.ts
-export function calculateMBTIType(responses) {
-	// Complex algorithm
+// ✅ DO: Extract logic with dependency injection
+// src/lib/auth/remotes/queries.logic.ts
+export interface GetUserDeps {
+	event: RequestEvent;
 }
 
-// src/lib/questions/calculateType.logic.test.ts
-import { calculateMBTIType } from './calculateType.logic';
-test('calculates INTJ correctly', () => {
-	// Test pure logic
+export function getUserLogic({ event }: GetUserDeps) {
+	return event.locals.user;
+}
+
+// src/lib/auth/remotes/index.remote.ts
+import { getRequestEvent, query } from '$app/server';
+import { getUserLogic } from './queries.logic';
+
+export const getUser = query(() => {
+	const event = getRequestEvent();
+	return getUserLogic({ event }); // Thin wrapper
+});
+
+// ✅ DO: Unit test the logic layer
+// src/lib/auth/remotes/tests/queries.test.ts
+import { getUserLogic } from '../queries.logic';
+
+test('should return user from event.locals', () => {
+	const mockEvent = { locals: { user: { id: '123' } } } as any;
+	const result = getUserLogic({ event: mockEvent });
+	expect(result).toEqual({ id: '123' });
 });
 ```
+
+**Why This Pattern Works:**
+
+- **`.remote.ts`** = SvelteKit integration (thin, cannot be tested)
+- **`.logic.ts`** = Pure business logic (testable with dependency injection)
+- **`.logic.test.ts`** = Unit tests with mocked dependencies
+
+This separation allows comprehensive unit testing while maintaining SvelteKit's remote function benefits.
+
+**Creating Centralized Test Mocks:**
+
+For complex dependencies like Drizzle DB and Better Auth, create centralized mock helper functions in `src/lib/test-mocks.ts`:
+
+```typescript
+// src/lib/test-mocks.ts
+import { vi } from 'vitest';
+import type { db } from './server/db';
+import type { auth } from './auth';
+
+type DeepPartial<T> = {
+	[P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
+};
+
+export function createMockDb() {
+	return {
+		query: {
+			user: { findFirst: vi.fn(), findMany: vi.fn() }
+		},
+		select: vi.fn().mockReturnValue({
+			from: vi.fn().mockReturnValue({
+				where: vi.fn()
+			})
+		})
+	} satisfies DeepPartial<typeof db>;
+}
+
+export function createMockAuth() {
+	return {
+		api: {
+			signUpEmail: Object.assign(vi.fn(), { path: undefined, options: undefined }),
+			signInEmail: Object.assign(vi.fn(), { path: undefined, options: undefined })
+		}
+	} satisfies DeepPartial<typeof auth>;
+}
+```
+
+**Using Mock Helpers in Tests:**
+
+```typescript
+import { createMockAuth, createMockDb } from '$lib/test-mocks';
+
+it('should create user when email does not exist', async () => {
+	const mockDb = createMockDb();
+	const mockAuth = createMockAuth();
+
+	// Mock database to return no existing user
+	mockDb.select().from().where.mockResolvedValue([]);
+
+	// Mock auth signup to succeed
+	mockAuth.api.signUpEmail.mockResolvedValue({ success: true });
+
+	await signUpLogic({ db: mockDb, auth: mockAuth, data, invalid });
+
+	expect(mockAuth.api.signUpEmail).toHaveBeenCalledWith({
+		body: { name: 'Test', email: 'test@example.com', password: 'pass123' }
+	});
+});
+```
+
+**Key Techniques:**
+
+- **`satisfies DeepPartial<typeof X>`**: Ensures type compatibility without losing vi.fn() methods
+- **`Object.assign(vi.fn(), { prop: value })`**: Adds properties to vi.fn() for complex API objects
+- **Chained mocks**: `mockDb.select().from().where` returns same mock for fluent API
+- **Type-safe mocking**: Full autocomplete on `.mockResolvedValue()` with correct types
+- **Centralized location**: All mock helpers in one file (`src/lib/test-mocks.ts`)
+
+**Why This Works:**
+
+Better Auth API methods are callable objects with additional properties (like `path` and `options`). Using `Object.assign(vi.fn(), { path: undefined, options: undefined })` creates a mock that:
+
+1. Is callable (from vi.fn())
+2. Has mock methods like `.mockResolvedValue()`
+3. Satisfies the Better Auth type structure
+4. Maintains full type safety
+
+**Parent-Child Component Pattern with Remote Functions:**
+
+Remote functions (`form()`, `query()`, `command()`) are imported and called in **parent components only**. Child components receive data and state as props, enabling testability and reusability.
+
+**The Pattern:**
+
+1. **Parent component** - Imports and uses the remote function
+2. **Child components** - Accept slices of the remote function data as props
+3. **Testing** - Child components can be unit tested with mock props, parent tested via E2E
+
+**Pattern by Remote Function Type:**
+
+**Form Functions (`form()`):**
+
+```typescript
+// ❌ DON'T: Import remote function in child component (not testable)
+// email-field.svelte
+<script lang="ts">
+	import { signUp } from '../../remotes/index.remote';
+</script>
+<Input {...signUp.fields.email.as('email')} />
+
+// ✅ DO: Accept props in child component (testable)
+// email-field.svelte
+<script lang="ts">
+	import type { RemoteFormIssue } from '@sveltejs/kit';
+	import type { ComponentProps } from 'svelte';
+	import { Input } from '$lib/components/ui/input';
+
+	let {
+		issues,
+		inputProps
+	}: { 
+		issues: RemoteFormIssue[] | undefined; 
+		inputProps: ComponentProps<typeof Input> 
+	} = $props();
+</script>
+
+<Field.Label for="email">Email</Field.Label>
+{#each issues as issue (issue.message)}
+	<Field.Error>{issue.message}</Field.Error>
+{/each}
+<Input {...inputProps} id="email" placeholder="you@example.com" />
+
+// ✅ DO: Import remote function in parent component
+// sign-up-form.svelte
+<script lang="ts">
+	import { signUp } from '../../remotes/index.remote';
+	import EmailField from './email-field.svelte';
+	import FormFooter from './form-footer.svelte';
+</script>
+
+<form {...signUp} novalidate>
+	<EmailField 
+		issues={signUp.fields.email.issues()} 
+		inputProps={signUp.fields.email.as('email')} 
+	/>
+	<FormFooter pending={signUp.pending} />
+</form>
+```
+
+**What to pass as props for forms:**
+- **Field state**: `issues={form.fields.fieldName.issues()}`
+- **Input props**: `inputProps={form.fields.fieldName.as('type')}`
+- **Pending state**: `pending={form.pending}`
+- **Form-level errors**: `formIssues={form.fields.allIssues()}`
+
+**Query Functions (`query()`):**
+
+```typescript
+// ❌ DON'T: Import query in child component
+// user-profile.svelte
+<script lang="ts">
+	import { getUser } from '../../remotes/index.remote';
+	const user = getUser();
+</script>
+{#if user.current}
+	<p>{user.current.name}</p>
+{/if}
+
+// ✅ DO: Accept query result as prop
+// user-profile.svelte
+<script lang="ts">
+	let { user }: { user: { name: string; email: string } } = $props();
+</script>
+<p>{user.name}</p>
+<p>{user.email}</p>
+
+// ✅ DO: Import query in parent component
+// dashboard.svelte
+<script lang="ts">
+	import { getUser } from '$lib/auth/remotes/index.remote';
+	import UserProfile from './user-profile.svelte';
+	
+	const userQuery = getUser();
+</script>
+
+{#if userQuery.loading}
+	<p>Loading...</p>
+{:else if userQuery.current}
+	<UserProfile user={userQuery.current} />
+{/if}
+```
+
+**What to pass as props for queries:**
+- **Query result**: `user={userQuery.current}` (the actual data)
+- **Loading state**: `loading={userQuery.loading}` (if child needs to show skeleton)
+- **Error state**: `error={userQuery.error}` (if child handles errors)
+
+**Command Functions (`command()`):**
+
+```typescript
+// ❌ DON'T: Import command in child component
+// like-button.svelte
+<script lang="ts">
+	import { addLike } from '../../remotes/index.remote';
+	async function handleClick() {
+		await addLike(postId);
+	}
+</script>
+<button onclick={handleClick}>Like</button>
+
+// ✅ DO: Accept click handler as prop
+// like-button.svelte
+<script lang="ts">
+	let { onclick }: { onclick: () => void } = $props();
+</script>
+<button {onclick}>Like</button>
+
+// ✅ DO: Import command in parent component
+// post-card.svelte
+<script lang="ts">
+	import { addLike } from '$lib/posts/remotes/index.remote';
+	import LikeButton from './like-button.svelte';
+	
+	let { postId }: { postId: string } = $props();
+	
+	async function handleLike() {
+		await addLike(postId);
+	}
+</script>
+
+<LikeButton onclick={handleLike} />
+```
+
+**What to pass as props for commands:**
+- **Click handlers**: `onclick={handleClick}` (callback that calls command)
+- **Loading state**: `pending={isPending}` (if command has async state)
+
+**Testing Child Components:**
+
+```typescript
+// tests/email-field.svelte.test.ts
+import { render } from 'vitest-browser-svelte';
+import { page } from '@vitest/browser/context';
+import EmailField from '../email-field.svelte';
+
+it('should display validation error', async () => {
+	render(EmailField, {
+		issues: [{ message: 'Invalid email format' }],
+		inputProps: {
+			name: 'email',
+			type: 'email',
+			required: true,
+			'aria-invalid': true
+		}
+	});
+
+	await expect.element(page.getByText('Invalid email format')).toBeInTheDocument();
+});
+```
+
+**Key Benefits:**
+
+- **Testable** - Child components accept mock props, no remote function mocking needed
+- **Reusable** - Child components work with any parent, not coupled to specific remote functions
+- **Type-safe** - Props are fully typed with TypeScript
+- **Isolated** - Each child component can be unit tested independently
+- **Single source of truth** - Parent component owns remote function state
+- **Clear data flow** - Props flow down from parent to children
 
 **Testing Components That Use Remote Functions:**
 
