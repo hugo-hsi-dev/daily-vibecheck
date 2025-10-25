@@ -33,6 +33,6 @@
 				/>
 			</Field.Group>
 		</Field.Set>
-		<FormFooter />
+		<FormFooter pending={signUp.pending} />
 	</Field.Group>
 </form>

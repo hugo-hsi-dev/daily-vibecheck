@@ -1,25 +1,16 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import { page } from '@vitest/browser/context';
 import FormFooter from '../form-footer.svelte';
 
-// Mock the remote function
-vi.mock('../../../remotes/index.remote', () => ({
-	signUp: {
-		pending: 0
-	}
-}));
-
 describe('FormFooter Component', () => {
-	beforeEach(() => {
-		vi.clearAllMocks();
-	});
-
 	describe('Rendering', () => {
 		it('should render the submit button with default text', async () => {
 			expect.hasAssertions();
 
-			render(FormFooter);
+			render(FormFooter, {
+				pending: 0
+			});
 
 			const submitButton = page.getByRole('button', { name: 'Create account' });
 			await expect.element(submitButton).toBeInTheDocument();
@@ -29,7 +20,9 @@ describe('FormFooter Component', () => {
 		it('should render the sign-in link', async () => {
 			expect.hasAssertions();
 
-			render(FormFooter);
+			render(FormFooter, {
+				pending: 0
+			});
 
 			const signInLink = page.getByRole('link', { name: 'Already have an account?' });
 			await expect.element(signInLink).toBeInTheDocument();
@@ -41,7 +34,9 @@ describe('FormFooter Component', () => {
 		it('should render all action elements', async () => {
 			expect.hasAssertions();
 
-			render(FormFooter);
+			render(FormFooter, {
+				pending: 0
+			});
 
 			// Submit button should be present
 			await expect
@@ -59,7 +54,9 @@ describe('FormFooter Component', () => {
 		it('should have correct href for sign-in link', async () => {
 			expect.hasAssertions();
 
-			render(FormFooter);
+			render(FormFooter, {
+				pending: 0
+			});
 
 			const signInLink = page.getByRole('link', { name: 'Already have an account?' });
 			await expect.element(signInLink).toHaveAttribute('href', '/auth/sign-in');
@@ -67,13 +64,39 @@ describe('FormFooter Component', () => {
 	});
 
 	describe('Submit Button States', () => {
-		it('should not be disabled by default', async () => {
+		it('should not be disabled when not pending', async () => {
 			expect.hasAssertions();
 
-			render(FormFooter);
+			render(FormFooter, {
+				pending: 0
+			});
 
 			const submitButton = page.getByRole('button', { name: 'Create account' });
 			await expect.element(submitButton).not.toBeDisabled();
+		});
+
+		it('should be disabled when pending', async () => {
+			expect.hasAssertions();
+
+			render(FormFooter, {
+				pending: 1
+			});
+
+			const submitButton = page.getByRole('button', { name: 'Creating account...' });
+			await expect.element(submitButton).toBeInTheDocument();
+			await expect.element(submitButton).toBeDisabled();
+		});
+
+		it('should show pending text when submitting', async () => {
+			expect.hasAssertions();
+
+			render(FormFooter, {
+				pending: 1
+			});
+
+			await expect
+				.element(page.getByRole('button', { name: 'Creating account...' }))
+				.toBeInTheDocument();
 		});
 	});
 });
