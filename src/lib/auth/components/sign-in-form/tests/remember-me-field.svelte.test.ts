@@ -1,18 +1,47 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import { page } from '@vitest/browser/context';
 import RememberMeField from '../remember-me-field.svelte';
+
+vi.mock('../../../remotes/index.remote', () => ({
+	signIn: {
+		pending: 0,
+		fields: {
+			email: {
+				issues: () => [],
+				as: (type: string) => ({
+					name: 'email',
+					type,
+					required: true,
+					value: ''
+				})
+			},
+			password: {
+				issues: () => [],
+				as: (type: string) => ({
+					name: 'password',
+					type,
+					required: true,
+					value: ''
+				})
+			},
+			rememberMe: {
+				as: (type: string) => ({
+					name: 'rememberMe',
+					type,
+					value: false
+				})
+			}
+		}
+	}
+}));
 
 describe('RememberMeField Component', () => {
 	describe('Rendering', () => {
 		it('should render label', async () => {
 			expect.hasAssertions();
 
-			render(RememberMeField, {
-				checkboxProps: {
-					name: 'rememberMe'
-				}
-			});
+			render(RememberMeField);
 
 			await expect.element(page.getByText('Remember me')).toBeInTheDocument();
 		});
@@ -20,11 +49,7 @@ describe('RememberMeField Component', () => {
 		it('should render checkbox with correct attributes', async () => {
 			expect.hasAssertions();
 
-			render(RememberMeField, {
-				checkboxProps: {
-					name: 'rememberMe'
-				}
-			});
+			render(RememberMeField);
 
 			const checkbox = page.getByRole('checkbox', { name: 'Remember me' });
 			await expect.element(checkbox).toBeInTheDocument();
@@ -34,28 +59,10 @@ describe('RememberMeField Component', () => {
 		it('should render unchecked by default', async () => {
 			expect.hasAssertions();
 
-			render(RememberMeField, {
-				checkboxProps: {
-					name: 'rememberMe'
-				}
-			});
+			render(RememberMeField);
 
 			const checkbox = page.getByRole('checkbox', { name: 'Remember me' });
 			await expect.element(checkbox).not.toBeChecked();
-		});
-
-		it('should render checked when checked is true', async () => {
-			expect.hasAssertions();
-
-			render(RememberMeField, {
-				checkboxProps: {
-					name: 'rememberMe',
-					checked: true
-				}
-			});
-
-			const checkbox = page.getByRole('checkbox', { name: 'Remember me' });
-			await expect.element(checkbox).toBeChecked();
 		});
 	});
 
@@ -63,11 +70,7 @@ describe('RememberMeField Component', () => {
 		it('should toggle checkbox when clicked', async () => {
 			expect.hasAssertions();
 
-			render(RememberMeField, {
-				checkboxProps: {
-					name: 'rememberMe'
-				}
-			});
+			render(RememberMeField);
 
 			const checkbox = page.getByRole('checkbox', { name: 'Remember me' });
 
@@ -86,11 +89,7 @@ describe('RememberMeField Component', () => {
 		it('should be clickable via label', async () => {
 			expect.hasAssertions();
 
-			render(RememberMeField, {
-				checkboxProps: {
-					name: 'rememberMe'
-				}
-			});
+			render(RememberMeField);
 
 			const checkbox = page.getByRole('checkbox', { name: 'Remember me' });
 			const label = page.getByText('Remember me');
@@ -108,11 +107,7 @@ describe('RememberMeField Component', () => {
 		it('should have proper label association', async () => {
 			expect.hasAssertions();
 
-			render(RememberMeField, {
-				checkboxProps: {
-					name: 'rememberMe'
-				}
-			});
+			render(RememberMeField);
 
 			const checkbox = page.getByRole('checkbox', { name: 'Remember me' });
 			await expect.element(checkbox).toBeInTheDocument();
@@ -120,31 +115,13 @@ describe('RememberMeField Component', () => {
 			// Verify checkbox can be found by its accessible name
 			await expect.element(page.getByRole('checkbox', { name: 'Remember me' })).toBeInTheDocument();
 		});
-
-		it('should support disabled state', async () => {
-			expect.hasAssertions();
-
-			render(RememberMeField, {
-				checkboxProps: {
-					name: 'rememberMe',
-					disabled: true
-				}
-			});
-
-			const checkbox = page.getByRole('checkbox', { name: 'Remember me' });
-			await expect.element(checkbox).toBeDisabled();
-		});
 	});
 
 	describe('Layout', () => {
 		it('should use horizontal orientation', async () => {
 			expect.hasAssertions();
 
-			render(RememberMeField, {
-				checkboxProps: {
-					name: 'rememberMe'
-				}
-			});
+			render(RememberMeField);
 
 			// The Field.Field component should have horizontal orientation
 			// We verify this by checking that both checkbox and label are present

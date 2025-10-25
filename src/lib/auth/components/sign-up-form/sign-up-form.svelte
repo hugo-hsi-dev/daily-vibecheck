@@ -15,24 +15,12 @@
 		<Field.Set>
 			<FormHeader />
 			<Field.Group>
-				<NameField
-					issues={signUp.fields.name.issues()}
-					inputProps={signUp.fields.name.as('text')}
-				/>
-				<EmailField
-					issues={signUp.fields.email.issues()}
-					inputProps={signUp.fields.email.as('email')}
-				/>
-				<PasswordField
-					issues={signUp.fields.password.issues()}
-					inputProps={signUp.fields.password.as('password')}
-				/>
-				<ConfirmPasswordField
-					issues={signUp.fields.confirmPassword.issues()}
-					inputProps={signUp.fields.confirmPassword.as('password')}
-				/>
+				<NameField />
+				<EmailField />
+				<PasswordField />
+				<ConfirmPasswordField />
 			</Field.Group>
 		</Field.Set>
-		<FormFooter pending={signUp.pending} />
+		<FormFooter />
 	</Field.Group>
 </form>
