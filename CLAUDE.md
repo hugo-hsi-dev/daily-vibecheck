@@ -1175,66 +1175,56 @@ Better Auth API methods are callable objects with additional properties (like `p
 3. Satisfies the Better Auth type structure
 4. Maintains full type safety
 
-**Prop-Based Pattern for Testable Form Components:**
+**Parent-Child Component Pattern with Remote Functions:**
 
-Form field components that use remote functions directly cannot be unit tested because `form()` objects contain complex Svelte snippets. To enable testing, use a **prop-based pattern** where components accept props instead of importing remote functions directly.
+Remote functions (`form()`, `query()`, `command()`) are imported and called in **parent components only**. Child components receive data and state as props, enabling testability and reusability.
 
-**❌ DON'T: Import remote function directly (not testable)**
+**The Pattern:**
+
+1. **Parent component** - Imports and uses the remote function
+2. **Child components** - Accept slices of the remote function data as props
+3. **Testing** - Child components can be unit tested with mock props, parent tested via E2E
+
+**Pattern by Remote Function Type:**
+
+**Form Functions (`form()`):**
 
 ```typescript
+// ❌ DON'T: Import remote function in child component (not testable)
 // email-field.svelte
 <script lang="ts">
 	import { signUp } from '../../remotes/index.remote';
 </script>
+<Input {...signUp.fields.email.as('email')} />
 
-<Field.Field orientation="responsive">
-	<Field.Content>
-		<Field.Label for="email">Email</Field.Label>
-		{#each signUp.fields.email.issues() as issue (issue)}
-			<Field.Error>{issue.message}</Field.Error>
-		{/each}
-	</Field.Content>
-	<Input {...signUp.fields.email.as('email')} id="email" />
-</Field.Field>
-```
-
-**✅ DO: Use props for testability**
-
-```typescript
+// ✅ DO: Accept props in child component (testable)
 // email-field.svelte
 <script lang="ts">
-	import * as Field from '$lib/components/ui/field';
-	import { Input } from '$lib/components/ui/input';
 	import type { RemoteFormIssue } from '@sveltejs/kit';
 	import type { ComponentProps } from 'svelte';
+	import { Input } from '$lib/components/ui/input';
 
 	let {
 		issues,
 		inputProps
-	}: { issues: RemoteFormIssue[] | undefined; inputProps: ComponentProps<typeof Input> } = $props();
+	}: { 
+		issues: RemoteFormIssue[] | undefined; 
+		inputProps: ComponentProps<typeof Input> 
+	} = $props();
 </script>
 
-<Field.Field orientation="responsive">
-	<Field.Content>
-		<Field.Label for="email">Email</Field.Label>
-		<Field.Description>For account access and notifications</Field.Description>
-		{#each issues as issue (issue.message)}
-			<div>
-				<Field.Error>{issue.message}</Field.Error>
-			</div>
-		{/each}
-	</Field.Content>
-	<Input {...inputProps} id="email" placeholder="you@example.com" />
-</Field.Field>
-```
+<Field.Label for="email">Email</Field.Label>
+{#each issues as issue (issue.message)}
+	<Field.Error>{issue.message}</Field.Error>
+{/each}
+<Input {...inputProps} id="email" placeholder="you@example.com" />
 
-**Parent component passes remote function props down:**
-
-```typescript
+// ✅ DO: Import remote function in parent component
 // sign-up-form.svelte
 <script lang="ts">
 	import { signUp } from '../../remotes/index.remote';
 	import EmailField from './email-field.svelte';
+	import FormFooter from './form-footer.svelte';
 </script>
 
 <form {...signUp} novalidate>
@@ -1242,10 +1232,99 @@ Form field components that use remote functions directly cannot be unit tested b
 		issues={signUp.fields.email.issues()} 
 		inputProps={signUp.fields.email.as('email')} 
 	/>
+	<FormFooter pending={signUp.pending} />
 </form>
 ```
 
-**Now the component can be unit tested:**
+**What to pass as props for forms:**
+- **Field state**: `issues={form.fields.fieldName.issues()}`
+- **Input props**: `inputProps={form.fields.fieldName.as('type')}`
+- **Pending state**: `pending={form.pending}`
+- **Form-level errors**: `formIssues={form.fields.allIssues()}`
+
+**Query Functions (`query()`):**
+
+```typescript
+// ❌ DON'T: Import query in child component
+// user-profile.svelte
+<script lang="ts">
+	import { getUser } from '../../remotes/index.remote';
+	const user = getUser();
+</script>
+{#if user.current}
+	<p>{user.current.name}</p>
+{/if}
+
+// ✅ DO: Accept query result as prop
+// user-profile.svelte
+<script lang="ts">
+	let { user }: { user: { name: string; email: string } } = $props();
+</script>
+<p>{user.name}</p>
+<p>{user.email}</p>
+
+// ✅ DO: Import query in parent component
+// dashboard.svelte
+<script lang="ts">
+	import { getUser } from '$lib/auth/remotes/index.remote';
+	import UserProfile from './user-profile.svelte';
+	
+	const userQuery = getUser();
+</script>
+
+{#if userQuery.loading}
+	<p>Loading...</p>
+{:else if userQuery.current}
+	<UserProfile user={userQuery.current} />
+{/if}
+```
+
+**What to pass as props for queries:**
+- **Query result**: `user={userQuery.current}` (the actual data)
+- **Loading state**: `loading={userQuery.loading}` (if child needs to show skeleton)
+- **Error state**: `error={userQuery.error}` (if child handles errors)
+
+**Command Functions (`command()`):**
+
+```typescript
+// ❌ DON'T: Import command in child component
+// like-button.svelte
+<script lang="ts">
+	import { addLike } from '../../remotes/index.remote';
+	async function handleClick() {
+		await addLike(postId);
+	}
+</script>
+<button onclick={handleClick}>Like</button>
+
+// ✅ DO: Accept click handler as prop
+// like-button.svelte
+<script lang="ts">
+	let { onclick }: { onclick: () => void } = $props();
+</script>
+<button {onclick}>Like</button>
+
+// ✅ DO: Import command in parent component
+// post-card.svelte
+<script lang="ts">
+	import { addLike } from '$lib/posts/remotes/index.remote';
+	import LikeButton from './like-button.svelte';
+	
+	let { postId }: { postId: string } = $props();
+	
+	async function handleLike() {
+		await addLike(postId);
+	}
+</script>
+
+<LikeButton onclick={handleLike} />
+```
+
+**What to pass as props for commands:**
+- **Click handlers**: `onclick={handleClick}` (callback that calls command)
+- **Loading state**: `pending={isPending}` (if command has async state)
+
+**Testing Child Components:**
 
 ```typescript
 // tests/email-field.svelte.test.ts
@@ -1270,10 +1349,12 @@ it('should display validation error', async () => {
 
 **Key Benefits:**
 
-- **Testable** - Can pass mock props directly without mocking remote functions
-- **Reusable** - Components work with any form, not coupled to specific remote function
+- **Testable** - Child components accept mock props, no remote function mocking needed
+- **Reusable** - Child components work with any parent, not coupled to specific remote functions
 - **Type-safe** - Props are fully typed with TypeScript
-- **Isolated** - Each component can be tested independently
+- **Isolated** - Each child component can be unit tested independently
+- **Single source of truth** - Parent component owns remote function state
+- **Clear data flow** - Props flow down from parent to children
 
 **Testing Components That Use Remote Functions:**
 
