@@ -64,10 +64,6 @@ Tests are **co-located with the code they test** in `tests/` subdirectories:
   - Test `.logic.ts` files, not `.remote.ts` files
   - Use centralized mocks from `src/lib/test-mocks.ts`
   - Named: `queries.test.ts`, `mutations.test.ts`
-- **E2E tests**: `e2e/*.spec.ts`
-  - Full user flows from browser to database
-  - No mocking - test against real services
-- Vitest is configured with `expect.requireAssertions: true` - all tests must include at least one assertion
 - Tests run automatically in watch mode during `npm run dev`
 
 ### Database Commands
@@ -89,11 +85,10 @@ Tests are **co-located with the code they test** in `tests/` subdirectories:
 
 ### Directory Structure
 
-- `src/routes/` - SvelteKit file-based routing (pages and API endpoints)
+- `src/routes/` - SvelteKit file-based routing (pages)
 - `src/lib/` - Shared library code (exported via `$lib` alias)
 - `src/lib/server/` - Server-only code (never bundled for client)
 - `src/lib/server/db/` - Database configuration and schema
-- `e2e/` - Playwright end-to-end tests
 
 ### Feature-Based Architecture
 
