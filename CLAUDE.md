@@ -1175,6 +1175,106 @@ Better Auth API methods are callable objects with additional properties (like `p
 3. Satisfies the Better Auth type structure
 4. Maintains full type safety
 
+**Prop-Based Pattern for Testable Form Components:**
+
+Form field components that use remote functions directly cannot be unit tested because `form()` objects contain complex Svelte snippets. To enable testing, use a **prop-based pattern** where components accept props instead of importing remote functions directly.
+
+**❌ DON'T: Import remote function directly (not testable)**
+
+```typescript
+// email-field.svelte
+<script lang="ts">
+	import { signUp } from '../../remotes/index.remote';
+</script>
+
+<Field.Field orientation="responsive">
+	<Field.Content>
+		<Field.Label for="email">Email</Field.Label>
+		{#each signUp.fields.email.issues() as issue (issue)}
+			<Field.Error>{issue.message}</Field.Error>
+		{/each}
+	</Field.Content>
+	<Input {...signUp.fields.email.as('email')} id="email" />
+</Field.Field>
+```
+
+**✅ DO: Use props for testability**
+
+```typescript
+// email-field.svelte
+<script lang="ts">
+	import * as Field from '$lib/components/ui/field';
+	import { Input } from '$lib/components/ui/input';
+	import type { RemoteFormIssue } from '@sveltejs/kit';
+	import type { ComponentProps } from 'svelte';
+
+	let {
+		issues,
+		inputProps
+	}: { issues: RemoteFormIssue[] | undefined; inputProps: ComponentProps<typeof Input> } = $props();
+</script>
+
+<Field.Field orientation="responsive">
+	<Field.Content>
+		<Field.Label for="email">Email</Field.Label>
+		<Field.Description>For account access and notifications</Field.Description>
+		{#each issues as issue (issue.message)}
+			<div>
+				<Field.Error>{issue.message}</Field.Error>
+			</div>
+		{/each}
+	</Field.Content>
+	<Input {...inputProps} id="email" placeholder="you@example.com" />
+</Field.Field>
+```
+
+**Parent component passes remote function props down:**
+
+```typescript
+// sign-up-form.svelte
+<script lang="ts">
+	import { signUp } from '../../remotes/index.remote';
+	import EmailField from './email-field.svelte';
+</script>
+
+<form {...signUp} novalidate>
+	<EmailField 
+		issues={signUp.fields.email.issues()} 
+		inputProps={signUp.fields.email.as('email')} 
+	/>
+</form>
+```
+
+**Now the component can be unit tested:**
+
+```typescript
+// tests/email-field.svelte.test.ts
+import { render } from 'vitest-browser-svelte';
+import { page } from '@vitest/browser/context';
+import EmailField from '../email-field.svelte';
+
+it('should display validation error', async () => {
+	render(EmailField, {
+		issues: [{ message: 'Invalid email format' }],
+		inputProps: {
+			name: 'email',
+			type: 'email',
+			required: true,
+			'aria-invalid': true
+		}
+	});
+
+	await expect.element(page.getByText('Invalid email format')).toBeInTheDocument();
+});
+```
+
+**Key Benefits:**
+
+- **Testable** - Can pass mock props directly without mocking remote functions
+- **Reusable** - Components work with any form, not coupled to specific remote function
+- **Type-safe** - Props are fully typed with TypeScript
+- **Isolated** - Each component can be tested independently
+
 **Testing Components That Use Remote Functions:**
 
 **Components using query() functions** can be tested by mocking the query:

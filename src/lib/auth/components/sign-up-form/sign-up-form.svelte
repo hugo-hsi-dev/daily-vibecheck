@@ -15,10 +15,22 @@
 		<Field.Set>
 			<FormHeader />
 			<Field.Group>
-				<NameField />
-				<EmailField />
-				<PasswordField />
-				<ConfirmPasswordField />
+				<NameField
+					issues={signUp.fields.name.issues()}
+					inputProps={signUp.fields.name.as('text')}
+				/>
+				<EmailField
+					issues={signUp.fields.email.issues()}
+					inputProps={signUp.fields.email.as('email')}
+				/>
+				<PasswordField
+					issues={signUp.fields.password.issues()}
+					inputProps={signUp.fields.password.as('password')}
+				/>
+				<ConfirmPasswordField
+					issues={signUp.fields.confirmPassword.issues()}
+					inputProps={signUp.fields.confirmPassword.as('password')}
+				/>
 			</Field.Group>
 		</Field.Set>
 		<FormFooter />
