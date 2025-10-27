@@ -28,8 +28,8 @@ importers:
         specifier: ^3.10.0
         version: 3.10.0
       '@lucide/svelte':
-        specifier: ^0.544.0
-        version: 0.544.0(svelte@5.41.3)
+        specifier: ^0.548.0
+        version: 0.548.0(svelte@5.41.3)
       '@playwright/test':
         specifier: ^1.55.1
         version: 1.56.1
@@ -556,8 +556,8 @@ packages:
   '@levischuck/tiny-cbor@0.2.11':
     resolution: {integrity: sha512-llBRm4dT4Z89aRsm6u2oEZ8tfwL/2l6BwpZ7JcyieouniDECM5AqNgr/y08zalEIvW3RSK4upYyybDcmjXqAow==}
 
-  '@lucide/svelte@0.544.0':
-    resolution: {integrity: sha512-9f9O6uxng2pLB01sxNySHduJN3HTl5p0HDu4H26VR51vhZfiMzyOMe9Mhof3XAk4l813eTtl+/DYRvGyoRR+yw==}
+  '@lucide/svelte@0.548.0':
+    resolution: {integrity: sha512-Iwh5GXK8+tE1lBjYoBPfOhBiWv6/K/XinZ/Bjx/2Qys86ufZ/CbjHKacYyZeGnyWQSsjcr7P3xavkmCMhv/1RA==}
     peerDependencies:
       svelte: ^5
 
@@ -2664,7 +2664,7 @@ snapshots:
 
   '@levischuck/tiny-cbor@0.2.11': {}
 
-  '@lucide/svelte@0.544.0(svelte@5.41.3)':
+  '@lucide/svelte@0.548.0(svelte@5.41.3)':
     dependencies:
       svelte: 5.41.3
 
